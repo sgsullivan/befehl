@@ -154,14 +154,13 @@ func runPayload(wg *sync.WaitGroup, host string, payload []byte, sshConfig *ssh.
 	}
 
 	// finally, run the payload
+	var sessionRunAttempt string
 	if err := session.Run(string(payload)); err != nil {
-		uhoh := fmt.Sprintf("session.Run() to %s failed: %s\n", host, err)
-		os.Stderr.WriteString(uhoh)
-		logPayloadRun(host, uhoh)
-		return
+		sessionRunAttempt = fmt.Sprintf("session.Run() to %s raised error: %s\n", host, err)
+		os.Stderr.WriteString(sessionRunAttempt)
 	}
 
-	cmdOutput := stdout.String() + stderr.String()
+	cmdOutput := stdout.String() + stderr.String() + "\n" + sessionRunAttempt
 	logPayloadRun(host, cmdOutput)
 }
 
