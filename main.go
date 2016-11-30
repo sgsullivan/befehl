@@ -132,7 +132,7 @@ func runPayload(wg *sync.WaitGroup, host string, payload []byte, sshConfig *ssh.
 	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:22", host), sshConfig)
 	if err != nil {
 		uhoh := fmt.Sprintf("ssh.Dial() to %s failed: %s\n", host, err)
-		os.Stderr.WriteString(uhoh)
+		color.Red(uhoh)
 		logPayloadRun(host, uhoh)
 		return
 	}
@@ -142,7 +142,7 @@ func runPayload(wg *sync.WaitGroup, host string, payload []byte, sshConfig *ssh.
 	session, err := client.NewSession()
 	if err != nil {
 		uhoh := fmt.Sprintf("ssh.NewSession() to %s failed: %s\n", host, err)
-		os.Stderr.WriteString(uhoh)
+		color.Red(uhoh)
 		logPayloadRun(host, uhoh)
 		return
 	}
@@ -162,7 +162,7 @@ func runPayload(wg *sync.WaitGroup, host string, payload []byte, sshConfig *ssh.
 	// Request pseudo terminal
 	if err := session.RequestPty("xterm", 24, 80, modes); err != nil {
 		uhoh := fmt.Sprintf("session.RequestPty() to %s failed: %s\n", host, err)
-		os.Stderr.WriteString(uhoh)
+		color.Red(uhoh)
 		logPayloadRun(host, uhoh)
 		return
 	}
@@ -171,7 +171,7 @@ func runPayload(wg *sync.WaitGroup, host string, payload []byte, sshConfig *ssh.
 	var sessionRunAttempt string
 	if err := session.Run(string(payload)); err != nil {
 		sessionRunAttempt = fmt.Sprintf("session.Run() to %s raised error: %s\n", host, err)
-		os.Stderr.WriteString(sessionRunAttempt)
+		color.Red(sessionRunAttempt)
 	}
 
 	cmdOutput := stdout.String() + stderr.String() + "\n" + sessionRunAttempt
