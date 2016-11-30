@@ -118,7 +118,7 @@ func fireTorpedos(payload []byte, targets *string, routines *int) {
 		}()
 	}
 
-	if wgTimeout(&wg, time.Duration(time.Duration(900)*time.Second)) {
+	if wgTimeout(&wg, time.Duration(time.Duration(1800)*time.Second)) {
 		panic("hit timeout waiting for all routines to finish")
 	}
 	color.Green("All routines completed!\n")
