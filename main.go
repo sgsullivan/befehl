@@ -6,14 +6,20 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"github.com/fatih/color"
 	"github.com/howeyc/gopass"
 	"golang.org/x/crypto/ssh"
 	"io/ioutil"
 	"log"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 )
+
+type Queue struct {
+	count int64
+}
 
 var store struct {
 	sshKey ssh.Signer
@@ -63,6 +69,11 @@ func populateSshKey() {
 	}
 }
 
+func (q *Queue) signifyComplete(total int) {
+	remaining := atomic.AddInt64(&q.count, -1)
+	color.Magenta(fmt.Sprintf("Remaining: %d / %d\n", remaining, total))
+}
+
 func fireTorpedos(payload []byte, targets *string, routines *int) {
 	file, err := os.Open(*targets)
 	if err != nil {
@@ -95,19 +106,22 @@ func fireTorpedos(payload []byte, targets *string, routines *int) {
 		Timeout: time.Duration(time.Duration(10) * time.Second),
 	}
 
+	queue := new(Queue)
+	queue.count = int64(hostCnt)
 	for _, host := range victims {
 		host := host
 		sem <- 1
 		go func() {
 			runPayload(&wg, host, payload, sshConfig)
 			<-sem
+			queue.signifyComplete(hostCnt)
 		}()
 	}
 
 	if wgTimeout(&wg, time.Duration(time.Duration(900)*time.Second)) {
 		panic("hit timeout waiting for all routines to finish")
 	}
-	log.Printf("All routines completed!\n")
+	color.Green("All routines completed!\n")
 }
 
 func runPayload(wg *sync.WaitGroup, host string, payload []byte, sshConfig *ssh.ClientConfig) {

@@ -4,8 +4,22 @@
 	"GodepVersion": "v74",
 	"Deps": [
 		{
+			"ImportPath": "github.com/fatih/color",
+			"Comment": "v0.2.0",
+			"Rev": "87d4004f2ab62d0d255e0a38f1680aa534549fe3"
+		},
+		{
 			"ImportPath": "github.com/howeyc/gopass",
 			"Rev": "f5387c492211eb133053880d23dfae62aa14123d"
+		},
+		{
+			"ImportPath": "github.com/mattn/go-colorable",
+			"Comment": "v0.0.6",
+			"Rev": "ed8eb9e318d7a84ce5915b495b7d35e0cfe7b5a8"
+		},
+		{
+			"ImportPath": "github.com/mattn/go-isatty",
+			"Rev": "66b8e73f3f5cda9f96b69efd03dd3d7fc4a5cdb8"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/curve25519",
