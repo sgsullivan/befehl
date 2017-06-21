@@ -6,7 +6,7 @@ clean:
 	rm -rf _exe/
 
 build:
-	godep go build -x -o _exe/befehl github.com/sgsullivan/befehl/cmd/befehl
+	godep go build -x -o _exe/befehl executor/befehl_main.go
 
 test:
 	godep go test -v
