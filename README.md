@@ -5,7 +5,7 @@
 
 `./befehl execute --hosts targets --payload payload.sh -routines 2000`
 
-Output of each payload run will be in the log directory (by defualt, its `$HOME/befehl/logs`) in a file named after the machine it ran on.
+Output of each payload run will be in the log directory (by default, its `$HOME/befehl/logs`) in a file named after the machine it ran on.
 The targets file should be a plain text file containing all hosts to run the payload on, separated by a new line.
 
 ## Configuration
