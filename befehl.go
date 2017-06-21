@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/howeyc/gopass"
+	"github.com/spf13/viper"
 	"golang.org/x/crypto/ssh"
 	"io/ioutil"
 	"log"
@@ -17,6 +18,8 @@ import (
 	"time"
 )
 
+var Config *viper.Viper
+
 type Queue struct {
 	count int64
 }
@@ -25,7 +28,8 @@ var store struct {
 	sshKey ssh.Signer
 }
 
-func Fire(targets *string, payload *string, routines *int) {
+func Fire(targets *string, payload *string, routines *int, passedViper *viper.Viper) {
+	Config = passedViper
 	bytePayload := readFile(payload)
 	populateSshKey()
 	fireTorpedos(bytePayload, targets, routines)
@@ -38,6 +42,9 @@ func populateSshKey() {
 	}
 
 	privKeyFile := os.Getenv("HOME") + "/.ssh/id_rsa"
+	if Config.GetString("auth.privatekeyfile") != "" {
+		privKeyFile = Config.GetString("auth.privatekeyfile")
+	}
 	rawKey := readFile(&privKeyFile)
 	privKeyBytes, _ := pem.Decode(rawKey)
 
@@ -98,8 +105,12 @@ func fireTorpedos(payload []byte, targets *string, routines *int) {
 	wg.Add(hostCnt)
 	var sem = make(chan int, *routines)
 
+	sshEntryUser := "root"
+	if Config.GetString("auth.sshuser") != "" {
+		sshEntryUser = Config.GetString("auth.sshuser")
+	}
 	sshConfig := &ssh.ClientConfig{
-		User: "root",
+		User: sshEntryUser,
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(store.sshKey),
 		},
@@ -179,8 +190,11 @@ func runPayload(wg *sync.WaitGroup, host string, payload []byte, sshConfig *ssh.
 }
 
 func logPayloadRun(host string, output string) {
-	logDir := os.Getenv("HOME") + "/befehl/logs/"
-	logFile := logDir + host
+	logDir := os.Getenv("HOME") + "/befehl/logs"
+	if Config.GetString("general.logdir") != "" {
+		logDir = Config.GetString("general.logdir")
+	}
+	logFile := logDir + "/" + host
 	if !pathExists(logDir) {
 		if err := os.MkdirAll(logDir, os.FileMode(0700)); err != nil {
 			panic(fmt.Sprintf("Failed creating [%s]: %s\n", logDir, err))
