@@ -10,9 +10,8 @@ import (
 var Config *viper.Viper
 
 var RootCmd = &cobra.Command{
-	Use:   "befehl",
-	Short: "ausführen willkürliche Befehle über ssh in Masse",
-	Long: `Gegeben ein Gastgeberliste, ausführen Nutzlast über ssh Auf jedem Host.
+	Use: "befehl",
+	Long: `ausführen willkürliche Befehle über ssh in Masse
 
 Dieses Werkzeug sollte mit Vorsicht verwendet werden; gegeben das Macht angeboten.`,
 }
