@@ -6,16 +6,18 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"github.com/fatih/color"
-	"github.com/howeyc/gopass"
-	"github.com/spf13/viper"
-	"golang.org/x/crypto/ssh"
 	"io/ioutil"
 	"log"
 	"os"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"golang.org/x/crypto/ssh"
+
+	"github.com/fatih/color"
+	"github.com/howeyc/gopass"
+	"github.com/spf13/viper"
 )
 
 var Config *viper.Viper
@@ -109,12 +111,14 @@ func fireTorpedos(payload []byte, targets *string, routines *int) {
 	if Config.GetString("auth.sshuser") != "" {
 		sshEntryUser = Config.GetString("auth.sshuser")
 	}
+
 	sshConfig := &ssh.ClientConfig{
 		User: sshEntryUser,
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(store.sshKey),
 		},
-		Timeout: time.Duration(time.Duration(10) * time.Second),
+		Timeout:         time.Duration(time.Duration(10) * time.Second),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
 	queue := new(Queue)
@@ -140,17 +144,17 @@ func runPayload(wg *sync.WaitGroup, host string, payload []byte, sshConfig *ssh.
 	log.Printf("running payload on %s ..\n", host)
 
 	// establish the connection
-	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:22", host), sshConfig)
+	conn, err := ssh.Dial("tcp", fmt.Sprintf("%s:22", host), sshConfig)
 	if err != nil {
 		uhoh := fmt.Sprintf("ssh.Dial() to %s failed: %s\n", host, err)
 		color.Red(uhoh)
 		logPayloadRun(host, uhoh)
 		return
 	}
-	defer client.Close()
+	defer conn.Close()
 
 	// open the session
-	session, err := client.NewSession()
+	session, err := conn.NewSession()
 	if err != nil {
 		uhoh := fmt.Sprintf("ssh.NewSession() to %s failed: %s\n", host, err)
 		color.Red(uhoh)
