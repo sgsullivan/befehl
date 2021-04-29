@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/sgsullivan/befehl"
+
 	"github.com/spf13/cobra"
+
+	"github.com/sgsullivan/befehl"
 )
 
 var payload string
