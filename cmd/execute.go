@@ -1,16 +1,11 @@
 package cmd
 
 import (
-	"fmt"
-
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	"github.com/sgsullivan/befehl"
 )
-
-var payload string
-var routines int
-var hostsList string
 
 var executeCmd = &cobra.Command{
 	Use:   "execute",
@@ -38,22 +33,26 @@ sshuser = "eingeben"
 
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		for _, value := range []string{payload, hostsList} {
-			if value == "" {
-				panic("Missing payload, or hosts; see --help")
-			}
-			if routines == 0 {
-				fmt.Printf("--routines not given, defaulting to 30..\n")
-				routines = 30
-			}
+		hosts, _ := cmd.Flags().GetString("hosts")
+		payload, _ := cmd.Flags().GetString("payload")
+		routines, _ := cmd.Flags().GetInt("routines")
+
+		if routines == 0 {
+			color.Yellow("--routines not given, defaulting to 30..\n")
+			routines = 30
 		}
-		befehl.Fire(&hostsList, &payload, &routines, Config)
+
+		befehl.Fire(hosts, payload, routines, Config)
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(executeCmd)
-	executeCmd.Flags().StringVarP(&payload, "payload", "", "", "file location to the payload, which contains the commands to execute on the remote hosts")
-	executeCmd.Flags().StringVarP(&hostsList, "hosts", "", "", "file location to hosts list, which contains all hosts (separated by newline) to run the payload on")
-	executeCmd.Flags().IntVarP(&routines, "routines", "", 0, "maximum number of payloads that will run at once (defaults to 30)")
+
+	executeCmd.Flags().String("payload", "", "file location to the payload, which contains the commands to execute on the remote hosts")
+	executeCmd.Flags().String("hosts", "", "file location to hosts list, which contains all hosts (separated by newline) to run the payload on")
+	executeCmd.Flags().Int("routines", 0, "maximum number of payloads that will run at once (defaults to 30)")
+
+	executeCmd.MarkFlagRequired("payload")
+	executeCmd.MarkFlagRequired("hosts")
 }

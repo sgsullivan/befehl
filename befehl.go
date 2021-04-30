@@ -30,7 +30,7 @@ var store struct {
 	sshKey ssh.Signer
 }
 
-func Fire(targets *string, payload *string, routines *int, passedViper *viper.Viper) {
+func Fire(targets, payload string, routines int, passedViper *viper.Viper) {
 	Config = passedViper
 	bytePayload := readFile(payload)
 	populateSshKey()
@@ -47,7 +47,7 @@ func populateSshKey() {
 	if Config.GetString("auth.privatekeyfile") != "" {
 		privKeyFile = Config.GetString("auth.privatekeyfile")
 	}
-	rawKey := readFile(&privKeyFile)
+	rawKey := readFile(privKeyFile)
 	privKeyBytes, _ := pem.Decode(rawKey)
 
 	if x509.IsEncryptedPEMBlock(privKeyBytes) {
@@ -83,8 +83,8 @@ func (q *Queue) signifyComplete(total int) {
 	color.Magenta(fmt.Sprintf("Remaining: %d / %d\n", remaining, total))
 }
 
-func fireTorpedos(payload []byte, targets *string, routines *int) {
-	file, err := os.Open(*targets)
+func fireTorpedos(payload []byte, targets string, routines int) {
+	file, err := os.Open(targets)
 	if err != nil {
 		panic(err)
 	}
@@ -105,7 +105,7 @@ func fireTorpedos(payload []byte, targets *string, routines *int) {
 
 	var wg sync.WaitGroup
 	wg.Add(hostCnt)
-	var sem = make(chan int, *routines)
+	var sem = make(chan int, routines)
 
 	sshEntryUser := "root"
 	if Config.GetString("auth.sshuser") != "" {
@@ -217,8 +217,8 @@ func logPayloadRun(host string, output string) {
 	log.Printf("payload completed on %s! logfile at: %s\n", host, logFile)
 }
 
-func readFile(file *string) []byte {
-	read, err := ioutil.ReadFile(*file)
+func readFile(file string) []byte {
+	read, err := ioutil.ReadFile(file)
 	if err != nil {
 		panic(err)
 	}
