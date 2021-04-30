@@ -22,6 +22,10 @@ sshuser = "nonrootuser"
 
 These options should be self explanatory so I wont describe what each does here.
 
+## Obtaining prebuilt binaries
+
+Head on over to the [releases page](https://github.com/sgsullivan/befehl/releases) to get prebuilt binaries for your platform.
+
 ## Building
 
 Once you have your Go environment setup, it should be as simple as cloning this git repo and running `make`. The resulting binary will be located at `_exe/befehl`.
