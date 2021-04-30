@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -19,7 +20,9 @@ Dieses Werkzeug sollte mit Vorsicht verwendet werden; gegeben das Macht angebote
 
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
-		panic(err)
+		color.Red("A fatal error has occurred:")
+		fmt.Printf("%s\n", err)
+		os.Exit(1)
 	}
 }
 
