@@ -1,0 +1,38 @@
+project_name: befehl
+before:
+  hooks:
+    - go mod verify
+builds:
+- env:
+  - CGO_ENABLED=0
+  goos:
+    - windows
+    - linux
+    - darwin
+archives:
+- replacements:
+    darwin: Darwin
+    linux: Linux
+    windows: Windows
+    amd64: x86_64
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
+nfpms:
+  -
+    replacements:
+      amd64: x86_64
+    license: "Apache 2"
+    description: "Run arbitrary commands over ssh in mass"
+    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats:
+      - rpm
+      - deb
+    bindir: "/usr/local/bin"

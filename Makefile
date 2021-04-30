@@ -11,3 +11,6 @@ test:
 
 update-deps:
 	go get -u
+
+release-build:
+	scripts/build/release-build
