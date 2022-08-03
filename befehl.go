@@ -16,7 +16,6 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/howeyc/gopass"
-	"github.com/spf13/viper"
 
 	"github.com/sgsullivan/befehl/util/system"
 )
@@ -30,14 +29,20 @@ func (q *queue) signifyComplete(total int) {
 	color.Magenta(fmt.Sprintf("Remaining: %d / %d\n", remaining, total))
 }
 
+type Options struct {
+	PrivateKeyFile string
+	SshUser string
+	LogDir string
+}
+
 type Instance struct {
-	viperConfig *viper.Viper
+	options *Options
 	sshKey ssh.Signer
 }
 
-func New(config *viper.Viper) *Instance {
+func New(options *Options) *Instance {
 	return &Instance{
-		viperConfig: config,
+		options: options,
 	}
 }
 
@@ -54,8 +59,8 @@ func (instance *Instance) populateSshKey() {
 	}
 
 	privKeyFile := os.Getenv("HOME") + "/.ssh/id_rsa"
-	if instance.viperConfig.GetString("auth.privatekeyfile") != "" {
-		privKeyFile = instance.viperConfig.GetString("auth.privatekeyfile")
+	if instance.options.PrivateKeyFile != "" {
+		privKeyFile = instance.options.PrivateKeyFile
 	}
 	rawKey := system.ReadFile(privKeyFile)
 	privKeyBytes, _ := pem.Decode(rawKey)
@@ -115,8 +120,8 @@ func (instance *Instance) fireTorpedos(payload []byte, targets string, routines 
 	var sem = make(chan int, routines)
 
 	sshEntryUser := "root"
-	if instance.viperConfig.GetString("auth.sshuser") != "" {
-		sshEntryUser = instance.viperConfig.GetString("auth.sshuser")
+	if instance.options.SshUser != "" {
+		sshEntryUser = instance.options.SshUser
 	}
 
 	sshConfig := &ssh.ClientConfig{
@@ -202,8 +207,8 @@ func (instance *Instance) runPayload(wg *sync.WaitGroup, host string, payload []
 
 func (instance *Instance) logPayloadRun(host string, output string) {
 	logDir := os.Getenv("HOME") + "/befehl/logs"
-	if instance.viperConfig.GetString("general.logdir") != "" {
-		logDir = instance.viperConfig.GetString("general.logdir")
+	if instance.options.LogDir != "" {
+		logDir = instance.options.LogDir
 	}
 	logFile := logDir + "/" + host
 	if !system.PathExists(logDir) {

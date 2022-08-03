@@ -42,7 +42,11 @@ sshuser = "eingeben"
 			routines = 30
 		}
 
-		instance := befehl.New(Config)
+		instance := befehl.New(&befehl.Options{
+			PrivateKeyFile: Config.GetString("auth.privatekeyfile"),
+			SshUser: Config.GetString("auth.sshuser"),
+			LogDir: Config.GetString("general.logdir"),
+		})
 
 		instance.Fire(hosts, payload, routines)
 	},
