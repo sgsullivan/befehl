@@ -47,14 +47,14 @@ func New(options *Options) *Instance {
 	}
 }
 
-func (instance *Instance) Fire(targets, payload string, routines int) error {
+func (instance *Instance) Fire(hostsFile, payload string, routines int) error {
 	if bytePayload, readFileErr := filesystem.ReadFile(payload); readFileErr == nil {
 		if instance.sshKey != nil {
 			if err := instance.populateSshKey(); err != nil {
 				return err
 			}
 		}
-		return instance.fireTorpedos(bytePayload, targets, routines)
+		return instance.executePayloadOnHosts(bytePayload, hostsFile, routines)
 	} else {
 		return readFileErr
 	}
@@ -123,34 +123,43 @@ func (instance *Instance) populateSshKey() error {
 	}
 }
 
-func (instance *Instance) fireTorpedos(payload []byte, targets string, routines int) error {
-	file, err := os.Open(targets)
-	if err != nil {
-		return err
+func (instance *Instance) getSshUser() string {
+	if instance.options.SshUser != "" {
+		return instance.options.SshUser
 	}
-	defer file.Close()
+	return "root"
+}
 
-	hostCnt := 0
+func (instance *Instance) buildHostLists(hostsFilePath string) ([]string, error) {
+	hostsFile, err := os.Open(hostsFilePath)
+	if err != nil {
+		return nil, err
+	}
+	defer hostsFile.Close()
+
 	victims := []string{}
-	scanner := bufio.NewScanner(file)
+
+	scanner := bufio.NewScanner(hostsFile)
 	for scanner.Scan() {
 		host := scanner.Text()
 		victims = append(victims, host)
-		hostCnt++
 	}
 
-	if err := scanner.Err(); err != nil {
-		return err
+	return victims, scanner.Err()
+}
+
+func (instance *Instance) executePayloadOnHosts(payload []byte, hostsFilePath string, routines int) error {
+	hostsList, hostsListsErr := instance.buildHostLists(hostsFilePath)
+	if hostsListsErr != nil {
+		return hostsListsErr
 	}
 
 	var wg sync.WaitGroup
+	hostCnt := len(hostsList)
 	wg.Add(hostCnt)
 	var sem = make(chan int, routines)
 
-	sshEntryUser := "root"
-	if instance.options.SshUser != "" {
-		sshEntryUser = instance.options.SshUser
-	}
+	sshEntryUser := instance.getSshUser()
 
 	sshConfig := &ssh.ClientConfig{
 		User: sshEntryUser,
@@ -163,7 +172,7 @@ func (instance *Instance) fireTorpedos(payload []byte, targets string, routines 
 
 	queue := new(queue)
 	queue.count = int64(hostCnt)
-	for _, host := range victims {
+	for _, host := range hostsList {
 		host := host
 		sem <- 1
 		go func() {
@@ -176,6 +185,7 @@ func (instance *Instance) fireTorpedos(payload []byte, targets string, routines 
 	if waitgroup.WgTimeout(&wg, time.Duration(1800)*time.Second) {
 		return fmt.Errorf("hit timeout waiting for all routines to finish")
 	}
+
 	color.Green("All routines completed!\n")
 	return nil
 }

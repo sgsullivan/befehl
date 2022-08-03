@@ -33,7 +33,7 @@ sshuser = "eingeben"
 
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		hosts, _ := cmd.Flags().GetString("hosts")
+		hostsFile, _ := cmd.Flags().GetString("hosts")
 		payload, _ := cmd.Flags().GetString("payload")
 		routines, _ := cmd.Flags().GetInt("routines")
 
@@ -48,7 +48,7 @@ sshuser = "eingeben"
 			LogDir:         Config.GetString("general.logdir"),
 		})
 
-		if err := instance.Fire(hosts, payload, routines); err != nil {
+		if err := instance.Fire(hostsFile, payload, routines); err != nil {
 			panic(err)
 		}
 	},
