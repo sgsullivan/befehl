@@ -48,7 +48,9 @@ sshuser = "eingeben"
 			LogDir:         Config.GetString("general.logdir"),
 		})
 
-		instance.Fire(hosts, payload, routines)
+		if err := instance.Fire(hosts, payload, routines); err != nil {
+			panic(err)
+		}
 	},
 }
 

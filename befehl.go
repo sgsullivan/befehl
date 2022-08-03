@@ -47,12 +47,17 @@ func New(options *Options) *Instance {
 	}
 }
 
-func (instance *Instance) Fire(targets, payload string, routines int) {
-	bytePayload := system.ReadFileUnsafe(payload)
-	if instance.sshKey != nil {
-		instance.populateSshKey()
+func (instance *Instance) Fire(targets, payload string, routines int) error {
+	if bytePayload, readFileErr := system.ReadFile(payload); readFileErr == nil {
+		if instance.sshKey != nil {
+			if err := instance.populateSshKey(); err != nil {
+				return err
+			}
+		}
+		return instance.fireTorpedos(bytePayload, targets, routines)
+	} else {
+		return readFileErr
 	}
-	instance.fireTorpedos(bytePayload, targets, routines)
 }
 
 func (instance *Instance) getPrivKeyFile() string {
@@ -102,27 +107,26 @@ func (instance *Instance) populateSshKeyUnencrypted(rawKey []byte) error {
 	return nil
 }
 
-func (instance *Instance) populateSshKey() {
+func (instance *Instance) populateSshKey() error {
 	privKeyFile := instance.getPrivKeyFile()
 
-	rawKey := system.ReadFileUnsafe(privKeyFile)
-	privKeyBytes, _ := pem.Decode(rawKey)
+	if rawKey, readFileError := system.ReadFile(privKeyFile); readFileError == nil {
+		privKeyBytes, _ := pem.Decode(rawKey)
 
-	if x509.IsEncryptedPEMBlock(privKeyBytes) {
-		if err := instance.populateSshKeyEncrypted(privKeyBytes); err != nil {
-			panic(err)
+		if x509.IsEncryptedPEMBlock(privKeyBytes) {
+			return instance.populateSshKeyEncrypted(privKeyBytes)
+		} else {
+			return instance.populateSshKeyUnencrypted(rawKey)
 		}
 	} else {
-		if err := instance.populateSshKeyUnencrypted(rawKey); err != nil {
-			panic(err)
-		}
+		return readFileError
 	}
 }
 
-func (instance *Instance) fireTorpedos(payload []byte, targets string, routines int) {
+func (instance *Instance) fireTorpedos(payload []byte, targets string, routines int) error {
 	file, err := os.Open(targets)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer file.Close()
 
@@ -136,7 +140,7 @@ func (instance *Instance) fireTorpedos(payload []byte, targets string, routines 
 	}
 
 	if err := scanner.Err(); err != nil {
-		panic(err)
+		return err
 	}
 
 	var wg sync.WaitGroup
@@ -170,9 +174,10 @@ func (instance *Instance) fireTorpedos(payload []byte, targets string, routines 
 	}
 
 	if waitgroup.WgTimeout(&wg, time.Duration(time.Duration(1800)*time.Second)) {
-		panic("hit timeout waiting for all routines to finish")
+		return fmt.Errorf("hit timeout waiting for all routines to finish")
 	}
 	color.Green("All routines completed!\n")
+	return nil
 }
 
 func (instance *Instance) runPayload(wg *sync.WaitGroup, host string, payload []byte, sshConfig *ssh.ClientConfig) {
@@ -184,7 +189,9 @@ func (instance *Instance) runPayload(wg *sync.WaitGroup, host string, payload []
 	if err != nil {
 		uhoh := fmt.Sprintf("ssh.Dial() to %s failed: %s\n", host, err)
 		color.Red(uhoh)
-		instance.logPayloadRun(host, uhoh)
+		if err := instance.logPayloadRun(host, uhoh); err != nil {
+			panic(err)
+		}
 		return
 	}
 	defer conn.Close()
@@ -194,7 +201,9 @@ func (instance *Instance) runPayload(wg *sync.WaitGroup, host string, payload []
 	if err != nil {
 		uhoh := fmt.Sprintf("ssh.NewSession() to %s failed: %s\n", host, err)
 		color.Red(uhoh)
-		instance.logPayloadRun(host, uhoh)
+		if err := instance.logPayloadRun(host, uhoh); err != nil {
+			panic(err)
+		}
 		return
 	}
 	defer session.Close()
@@ -214,7 +223,9 @@ func (instance *Instance) runPayload(wg *sync.WaitGroup, host string, payload []
 	if err := session.RequestPty("xterm", 24, 80, modes); err != nil {
 		uhoh := fmt.Sprintf("session.RequestPty() to %s failed: %s\n", host, err)
 		color.Red(uhoh)
-		instance.logPayloadRun(host, uhoh)
+		if err := instance.logPayloadRun(host, uhoh); err != nil {
+			panic(err)
+		}
 		return
 	}
 
@@ -226,10 +237,12 @@ func (instance *Instance) runPayload(wg *sync.WaitGroup, host string, payload []
 	}
 
 	cmdOutput := stdout.String() + stderr.String() + "\n" + sessionRunAttempt
-	instance.logPayloadRun(host, cmdOutput)
+	if err := instance.logPayloadRun(host, cmdOutput); err != nil {
+		panic(err)
+	}
 }
 
-func (instance *Instance) logPayloadRun(host string, output string) {
+func (instance *Instance) logPayloadRun(host string, output string) error {
 	logDir := os.Getenv("HOME") + "/befehl/logs"
 	if instance.options.LogDir != "" {
 		logDir = instance.options.LogDir
@@ -237,18 +250,19 @@ func (instance *Instance) logPayloadRun(host string, output string) {
 	logFile := logDir + "/" + host
 	if !system.PathExists(logDir) {
 		if err := os.MkdirAll(logDir, os.FileMode(0700)); err != nil {
-			panic(fmt.Sprintf("Failed creating [%s]: %s\n", logDir, err))
+			return fmt.Errorf("failed creating [%s]: %s", logDir, err)
 		}
 	}
 	f, err := os.Create(logFile)
 	if err != nil {
-		panic(fmt.Sprintf("Error creating [%s]: %s", logFile, err))
+		return fmt.Errorf("error creating [%s]: %s", logFile, err)
 	}
 	defer f.Close()
 
 	if _, err = f.WriteString(output); err != nil {
-		panic(fmt.Sprintf("Error writing to [%s]: %s", logFile, err))
+		return fmt.Errorf("error writing to [%s]: %s", logFile, err)
 	}
 
 	log.Printf("payload completed on %s! logfile at: %s\n", host, logFile)
+	return nil
 }

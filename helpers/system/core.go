@@ -5,12 +5,12 @@ import (
 	"os"
 )
 
-func ReadFileUnsafe(file string) []byte {
+func ReadFile(file string) ([]byte, error) {
 	read, err := ioutil.ReadFile(file)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return read
+	return read, nil
 }
 
 func PathExists(path string) bool {
