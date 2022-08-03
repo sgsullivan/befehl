@@ -149,9 +149,9 @@ func (instance *Instance) buildHostLists(hostsFilePath string) ([]string, error)
 }
 
 func (instance *Instance) executePayloadOnHosts(payload []byte, hostsFilePath string, routines int) error {
-	hostsList, hostsListsErr := instance.buildHostLists(hostsFilePath)
-	if hostsListsErr != nil {
-		return hostsListsErr
+	hostsList, err := instance.buildHostLists(hostsFilePath)
+	if err != nil {
+		return err
 	}
 
 	var wg sync.WaitGroup
