@@ -1,9 +1,12 @@
 all: test build
 
+format:
+	gofmt -s -w .
+
 clean:
 	rm -rf _exe/
 
-build:
+build: format
 	go build -x -o _exe/befehl cmd/main/main.go
 
 test:

@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-func ReadFile(file string) []byte {
+func ReadFileUnsafe(file string) []byte {
 	read, err := ioutil.ReadFile(file)
 	if err != nil {
 		panic(err)

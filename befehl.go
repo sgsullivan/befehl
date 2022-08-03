@@ -17,7 +17,8 @@ import (
 	"github.com/fatih/color"
 	"github.com/howeyc/gopass"
 
-	"github.com/sgsullivan/befehl/util/system"
+	"github.com/sgsullivan/befehl/helpers/system"
+	"github.com/sgsullivan/befehl/helpers/waitgroup"
 )
 
 type queue struct {
@@ -31,13 +32,13 @@ func (q *queue) signifyComplete(total int) {
 
 type Options struct {
 	PrivateKeyFile string
-	SshUser string
-	LogDir string
+	SshUser        string
+	LogDir         string
 }
 
 type Instance struct {
 	options *Options
-	sshKey ssh.Signer
+	sshKey  ssh.Signer
 }
 
 func New(options *Options) *Instance {
@@ -47,53 +48,76 @@ func New(options *Options) *Instance {
 }
 
 func (instance *Instance) Fire(targets, payload string, routines int) {
-	bytePayload := system.ReadFile(payload)
-	instance.populateSshKey()
+	bytePayload := system.ReadFileUnsafe(payload)
+	if instance.sshKey != nil {
+		instance.populateSshKey()
+	}
 	instance.fireTorpedos(bytePayload, targets, routines)
 }
 
-func (instance *Instance) populateSshKey() {
-	// do nothing if sshKey Signer is already stored!
-	if instance.sshKey != nil {
-		return
-	}
-
+func (instance *Instance) getPrivKeyFile() string {
 	privKeyFile := os.Getenv("HOME") + "/.ssh/id_rsa"
 	if instance.options.PrivateKeyFile != "" {
 		privKeyFile = instance.options.PrivateKeyFile
 	}
-	rawKey := system.ReadFile(privKeyFile)
+
+	return privKeyFile
+}
+
+func (instance *Instance) populateSshKeyEncrypted(privKeyBytes *pem.Block) error {
+	fmt.Printf("enter private key password: ")
+	password, err := gopass.GetPasswd()
+	if err != nil {
+		return fmt.Errorf("error when reading input: %v", err)
+	}
+
+	pwBuf, err := x509.DecryptPEMBlock(privKeyBytes, []byte(password))
+	if err != nil {
+		return fmt.Errorf("x509.DecryptPEMBlock failed: %v", err)
+	}
+
+	pk, err := x509.ParsePKCS1PrivateKey(pwBuf)
+	if err != nil {
+		return fmt.Errorf("x509.ParsePKCS1PrivateKey failed: %v", err)
+	}
+
+	signer, err := ssh.NewSignerFromKey(pk)
+	if err != nil {
+		return fmt.Errorf("ssh.NewSignerFromKey failed: %v", err)
+	}
+
+	instance.sshKey = signer
+
+	return nil
+}
+
+func (instance *Instance) populateSshKeyUnencrypted(rawKey []byte) error {
+	signer, err := ssh.ParsePrivateKey(rawKey)
+	if err != nil {
+		return fmt.Errorf("unable to parse private key: %v", err)
+	}
+
+	instance.sshKey = signer
+
+	return nil
+}
+
+func (instance *Instance) populateSshKey() {
+	privKeyFile := instance.getPrivKeyFile()
+
+	rawKey := system.ReadFileUnsafe(privKeyFile)
 	privKeyBytes, _ := pem.Decode(rawKey)
 
 	if x509.IsEncryptedPEMBlock(privKeyBytes) {
-		fmt.Printf("enter private key password: ")
-		password, err := gopass.GetPasswd()
-		if err != nil {
-			panic(fmt.Sprintf("Error when reading input: %v", err))
+		if err := instance.populateSshKeyEncrypted(privKeyBytes); err != nil {
+			panic(err)
 		}
-		pwBuf, err := x509.DecryptPEMBlock(privKeyBytes, []byte(password))
-		if err != nil {
-			panic(fmt.Sprintf("x509.DecryptPEMBlock failed: %v", err))
-		}
-		pk, err := x509.ParsePKCS1PrivateKey(pwBuf)
-		if err != nil {
-			panic(fmt.Sprintf("x509.ParsePKCS1PrivateKey failed: %v", err))
-		}
-		signer, err := ssh.NewSignerFromKey(pk)
-		if err != nil {
-			panic(fmt.Sprintf("ssh.NewSignerFromKey failed: %v", err))
-		}
-		instance.sshKey = signer
 	} else {
-		signer, err := ssh.ParsePrivateKey(rawKey)
-		if err != nil {
-			panic(fmt.Sprintf("unable to parse private key: %v", err))
+		if err := instance.populateSshKeyUnencrypted(rawKey); err != nil {
+			panic(err)
 		}
-		instance.sshKey = signer
 	}
 }
-
-
 
 func (instance *Instance) fireTorpedos(payload []byte, targets string, routines int) {
 	file, err := os.Open(targets)
@@ -145,7 +169,7 @@ func (instance *Instance) fireTorpedos(payload []byte, targets string, routines 
 		}()
 	}
 
-	if wgTimeout(&wg, time.Duration(time.Duration(1800)*time.Second)) {
+	if waitgroup.WgTimeout(&wg, time.Duration(time.Duration(1800)*time.Second)) {
 		panic("hit timeout waiting for all routines to finish")
 	}
 	color.Green("All routines completed!\n")
@@ -227,18 +251,4 @@ func (instance *Instance) logPayloadRun(host string, output string) {
 	}
 
 	log.Printf("payload completed on %s! logfile at: %s\n", host, logFile)
-}
-
-func wgTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
-	c := make(chan struct{})
-	go func() {
-		defer close(c)
-		wg.Wait()
-	}()
-	select {
-	case <-c:
-		return false // completed normally
-	case <-time.After(timeout):
-		return true // timed out
-	}
 }
