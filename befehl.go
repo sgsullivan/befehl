@@ -37,7 +37,7 @@ func New(options *Options) *Instance {
 	}
 }
 
-func (instance *Instance) Fire(hostsFile, payload string, routines int) error {
+func (instance *Instance) Execute(hostsFile, payload string, routines int) error {
 	if bytePayload, readFileErr := filesystem.ReadFile(payload); readFileErr == nil {
 		if instance.sshKey != nil {
 			if err := instance.populateSshKey(); err != nil {
