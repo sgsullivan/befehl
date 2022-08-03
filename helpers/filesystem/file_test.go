@@ -7,7 +7,7 @@ import (
 
 var expectedFileContents = "hello world"
 
-func pathExists(path string) bool {
+func testPathExists(path string) bool {
 	if _, e := os.Stat(path); e == nil {
 		return true
 	}
@@ -17,7 +17,7 @@ func pathExists(path string) bool {
 
 func TestFileExists(t *testing.T) {
 	filePath := "foobar"
-	if pathExists(filePath) {
+	if testPathExists(filePath) {
 		t.Fatalf("filePath [%s] exists", filePath)
 	}
 	if e := os.WriteFile(
@@ -41,7 +41,7 @@ func TestFileExists(t *testing.T) {
 
 func TestReadFile(t *testing.T) {
 	dummyFile := "/foo/bar/baz/biz"
-	if pathExists(dummyFile) {
+	if testPathExists(dummyFile) {
 		t.Fatalf("expected [%s] to not exist but it does", dummyFile)
 	}
 	if _, e := ReadFile(dummyFile); e == nil {
