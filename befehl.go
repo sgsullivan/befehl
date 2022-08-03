@@ -254,14 +254,20 @@ func (instance *Instance) getLogFilePath(host string) string {
 	return instance.getLogDir() + "/" + host
 }
 
-func (instance *Instance) logPayloadRun(host string, output string) error {
+func (instance *Instance) prepareLogDir() error {
 	logDir := instance.getLogDir()
-	logFilePath := instance.getLogFilePath(host)
 	if !filesystem.PathExists(logDir) {
 		if err := os.MkdirAll(logDir, os.FileMode(0700)); err != nil {
 			return fmt.Errorf("failed creating [%s]: %s", logDir, err)
 		}
 	}
+	return nil
+}
+
+func (instance *Instance) logPayloadRun(host string, output string) error {
+	instance.prepareLogDir()
+	logFilePath := instance.getLogFilePath(host)
+
 	logFile, err := os.Create(logFilePath)
 	if err != nil {
 		return fmt.Errorf("error creating [%s]: %s", logFilePath, err)
