@@ -6,7 +6,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"sync"
@@ -18,6 +17,8 @@ import (
 	"github.com/fatih/color"
 	"github.com/howeyc/gopass"
 	"github.com/spf13/viper"
+
+	"github.com/sgsullivan/befehl/util/system"
 )
 
 type queue struct {
@@ -41,7 +42,7 @@ func New(config *viper.Viper) *Instance {
 }
 
 func (instance *Instance) Fire(targets, payload string, routines int) {
-	bytePayload := readFile(payload)
+	bytePayload := system.ReadFile(payload)
 	instance.populateSshKey()
 	instance.fireTorpedos(bytePayload, targets, routines)
 }
@@ -56,7 +57,7 @@ func (instance *Instance) populateSshKey() {
 	if instance.viperConfig.GetString("auth.privatekeyfile") != "" {
 		privKeyFile = instance.viperConfig.GetString("auth.privatekeyfile")
 	}
-	rawKey := readFile(privKeyFile)
+	rawKey := system.ReadFile(privKeyFile)
 	privKeyBytes, _ := pem.Decode(rawKey)
 
 	if x509.IsEncryptedPEMBlock(privKeyBytes) {
@@ -205,7 +206,7 @@ func (instance *Instance) logPayloadRun(host string, output string) {
 		logDir = instance.viperConfig.GetString("general.logdir")
 	}
 	logFile := logDir + "/" + host
-	if !pathExists(logDir) {
+	if !system.PathExists(logDir) {
 		if err := os.MkdirAll(logDir, os.FileMode(0700)); err != nil {
 			panic(fmt.Sprintf("Failed creating [%s]: %s\n", logDir, err))
 		}
@@ -221,21 +222,6 @@ func (instance *Instance) logPayloadRun(host string, output string) {
 	}
 
 	log.Printf("payload completed on %s! logfile at: %s\n", host, logFile)
-}
-
-func readFile(file string) []byte {
-	read, err := ioutil.ReadFile(file)
-	if err != nil {
-		panic(err)
-	}
-	return read
-}
-
-func pathExists(path string) bool {
-	if _, err := os.Stat(path); err == nil {
-		return true
-	}
-	return false
 }
 
 func wgTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
