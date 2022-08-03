@@ -20,32 +20,41 @@ import (
 	"github.com/spf13/viper"
 )
 
-var Config *viper.Viper
-
-type Queue struct {
+type queue struct {
 	count int64
 }
 
-var store struct {
+func (q *queue) signifyComplete(total int) {
+	remaining := atomic.AddInt64(&q.count, -1)
+	color.Magenta(fmt.Sprintf("Remaining: %d / %d\n", remaining, total))
+}
+
+type Instance struct {
+	viperConfig *viper.Viper
 	sshKey ssh.Signer
 }
 
-func Fire(targets, payload string, routines int, passedViper *viper.Viper) {
-	Config = passedViper
-	bytePayload := readFile(payload)
-	populateSshKey()
-	fireTorpedos(bytePayload, targets, routines)
+func New(config *viper.Viper) *Instance {
+	return &Instance{
+		viperConfig: config,
+	}
 }
 
-func populateSshKey() {
+func (instance *Instance) Fire(targets, payload string, routines int) {
+	bytePayload := readFile(payload)
+	instance.populateSshKey()
+	instance.fireTorpedos(bytePayload, targets, routines)
+}
+
+func (instance *Instance) populateSshKey() {
 	// do nothing if sshKey Signer is already stored!
-	if store.sshKey != nil {
+	if instance.sshKey != nil {
 		return
 	}
 
 	privKeyFile := os.Getenv("HOME") + "/.ssh/id_rsa"
-	if Config.GetString("auth.privatekeyfile") != "" {
-		privKeyFile = Config.GetString("auth.privatekeyfile")
+	if instance.viperConfig.GetString("auth.privatekeyfile") != "" {
+		privKeyFile = instance.viperConfig.GetString("auth.privatekeyfile")
 	}
 	rawKey := readFile(privKeyFile)
 	privKeyBytes, _ := pem.Decode(rawKey)
@@ -68,22 +77,19 @@ func populateSshKey() {
 		if err != nil {
 			panic(fmt.Sprintf("ssh.NewSignerFromKey failed: %v", err))
 		}
-		store.sshKey = signer
+		instance.sshKey = signer
 	} else {
 		signer, err := ssh.ParsePrivateKey(rawKey)
 		if err != nil {
 			panic(fmt.Sprintf("unable to parse private key: %v", err))
 		}
-		store.sshKey = signer
+		instance.sshKey = signer
 	}
 }
 
-func (q *Queue) signifyComplete(total int) {
-	remaining := atomic.AddInt64(&q.count, -1)
-	color.Magenta(fmt.Sprintf("Remaining: %d / %d\n", remaining, total))
-}
 
-func fireTorpedos(payload []byte, targets string, routines int) {
+
+func (instance *Instance) fireTorpedos(payload []byte, targets string, routines int) {
 	file, err := os.Open(targets)
 	if err != nil {
 		panic(err)
@@ -108,26 +114,26 @@ func fireTorpedos(payload []byte, targets string, routines int) {
 	var sem = make(chan int, routines)
 
 	sshEntryUser := "root"
-	if Config.GetString("auth.sshuser") != "" {
-		sshEntryUser = Config.GetString("auth.sshuser")
+	if instance.viperConfig.GetString("auth.sshuser") != "" {
+		sshEntryUser = instance.viperConfig.GetString("auth.sshuser")
 	}
 
 	sshConfig := &ssh.ClientConfig{
 		User: sshEntryUser,
 		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(store.sshKey),
+			ssh.PublicKeys(instance.sshKey),
 		},
 		Timeout:         time.Duration(time.Duration(10) * time.Second),
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
-	queue := new(Queue)
+	queue := new(queue)
 	queue.count = int64(hostCnt)
 	for _, host := range victims {
 		host := host
 		sem <- 1
 		go func() {
-			runPayload(&wg, host, payload, sshConfig)
+			instance.runPayload(&wg, host, payload, sshConfig)
 			<-sem
 			queue.signifyComplete(hostCnt)
 		}()
@@ -139,7 +145,7 @@ func fireTorpedos(payload []byte, targets string, routines int) {
 	color.Green("All routines completed!\n")
 }
 
-func runPayload(wg *sync.WaitGroup, host string, payload []byte, sshConfig *ssh.ClientConfig) {
+func (instance *Instance) runPayload(wg *sync.WaitGroup, host string, payload []byte, sshConfig *ssh.ClientConfig) {
 	defer wg.Done()
 	log.Printf("running payload on %s ..\n", host)
 
@@ -148,7 +154,7 @@ func runPayload(wg *sync.WaitGroup, host string, payload []byte, sshConfig *ssh.
 	if err != nil {
 		uhoh := fmt.Sprintf("ssh.Dial() to %s failed: %s\n", host, err)
 		color.Red(uhoh)
-		logPayloadRun(host, uhoh)
+		instance.logPayloadRun(host, uhoh)
 		return
 	}
 	defer conn.Close()
@@ -158,7 +164,7 @@ func runPayload(wg *sync.WaitGroup, host string, payload []byte, sshConfig *ssh.
 	if err != nil {
 		uhoh := fmt.Sprintf("ssh.NewSession() to %s failed: %s\n", host, err)
 		color.Red(uhoh)
-		logPayloadRun(host, uhoh)
+		instance.logPayloadRun(host, uhoh)
 		return
 	}
 	defer session.Close()
@@ -178,7 +184,7 @@ func runPayload(wg *sync.WaitGroup, host string, payload []byte, sshConfig *ssh.
 	if err := session.RequestPty("xterm", 24, 80, modes); err != nil {
 		uhoh := fmt.Sprintf("session.RequestPty() to %s failed: %s\n", host, err)
 		color.Red(uhoh)
-		logPayloadRun(host, uhoh)
+		instance.logPayloadRun(host, uhoh)
 		return
 	}
 
@@ -190,13 +196,13 @@ func runPayload(wg *sync.WaitGroup, host string, payload []byte, sshConfig *ssh.
 	}
 
 	cmdOutput := stdout.String() + stderr.String() + "\n" + sessionRunAttempt
-	logPayloadRun(host, cmdOutput)
+	instance.logPayloadRun(host, cmdOutput)
 }
 
-func logPayloadRun(host string, output string) {
+func (instance *Instance) logPayloadRun(host string, output string) {
 	logDir := os.Getenv("HOME") + "/befehl/logs"
-	if Config.GetString("general.logdir") != "" {
-		logDir = Config.GetString("general.logdir")
+	if instance.viperConfig.GetString("general.logdir") != "" {
+		logDir = instance.viperConfig.GetString("general.logdir")
 	}
 	logFile := logDir + "/" + host
 	if !pathExists(logDir) {

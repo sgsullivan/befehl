@@ -42,7 +42,9 @@ sshuser = "eingeben"
 			routines = 30
 		}
 
-		befehl.Fire(hosts, payload, routines, Config)
+		instance := befehl.New(Config)
+
+		instance.Fire(hosts, payload, routines)
 	},
 }
 
