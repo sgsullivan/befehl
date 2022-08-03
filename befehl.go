@@ -17,7 +17,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/howeyc/gopass"
 
-	"github.com/sgsullivan/befehl/helpers/system"
+	"github.com/sgsullivan/befehl/helpers/filesystem"
 	"github.com/sgsullivan/befehl/helpers/waitgroup"
 )
 
@@ -48,7 +48,7 @@ func New(options *Options) *Instance {
 }
 
 func (instance *Instance) Fire(targets, payload string, routines int) error {
-	if bytePayload, readFileErr := system.ReadFile(payload); readFileErr == nil {
+	if bytePayload, readFileErr := filesystem.ReadFile(payload); readFileErr == nil {
 		if instance.sshKey != nil {
 			if err := instance.populateSshKey(); err != nil {
 				return err
@@ -110,7 +110,7 @@ func (instance *Instance) populateSshKeyUnencrypted(rawKey []byte) error {
 func (instance *Instance) populateSshKey() error {
 	privKeyFile := instance.getPrivKeyFile()
 
-	if rawKey, readFileError := system.ReadFile(privKeyFile); readFileError == nil {
+	if rawKey, readFileError := filesystem.ReadFile(privKeyFile); readFileError == nil {
 		privKeyBytes, _ := pem.Decode(rawKey)
 
 		if x509.IsEncryptedPEMBlock(privKeyBytes) {
@@ -157,7 +157,7 @@ func (instance *Instance) fireTorpedos(payload []byte, targets string, routines 
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(instance.sshKey),
 		},
-		Timeout:         time.Duration(time.Duration(10) * time.Second),
+		Timeout:         time.Duration(10) * time.Second,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
@@ -173,7 +173,7 @@ func (instance *Instance) fireTorpedos(payload []byte, targets string, routines 
 		}()
 	}
 
-	if waitgroup.WgTimeout(&wg, time.Duration(time.Duration(1800)*time.Second)) {
+	if waitgroup.WgTimeout(&wg, time.Duration(1800)*time.Second) {
 		return fmt.Errorf("hit timeout waiting for all routines to finish")
 	}
 	color.Green("All routines completed!\n")
@@ -248,7 +248,7 @@ func (instance *Instance) logPayloadRun(host string, output string) error {
 		logDir = instance.options.LogDir
 	}
 	logFile := logDir + "/" + host
-	if !system.PathExists(logDir) {
+	if !filesystem.PathExists(logDir) {
 		if err := os.MkdirAll(logDir, os.FileMode(0700)); err != nil {
 			return fmt.Errorf("failed creating [%s]: %s", logDir, err)
 		}

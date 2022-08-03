@@ -1,4 +1,4 @@
-package system
+package filesystem
 
 import (
 	"io/ioutil"
@@ -13,9 +13,8 @@ func ReadFile(file string) ([]byte, error) {
 	return read, nil
 }
 
-func PathExists(path string) bool {
-	if _, err := os.Stat(path); err == nil {
-		return true
-	}
-	return false
+func FileExists(file string) bool {
+	_, err := os.Stat(file)
+
+	return !os.IsNotExist(err)
 }

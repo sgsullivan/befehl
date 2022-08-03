@@ -1,4 +1,4 @@
-all: test build
+all: build
 
 format:
 	gofmt -s -w .
@@ -6,11 +6,11 @@ format:
 clean:
 	rm -rf _exe/
 
-build: format
+build:  format test
 	go build -x -o _exe/befehl cmd/main/main.go
 
 test:
-	go test -v
+	go test -v ./...
 
 update-deps:
 	go get -u
