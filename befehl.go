@@ -51,12 +51,11 @@ func (instance *Instance) Fire(hostsFile, payload string, routines int) error {
 }
 
 func (instance *Instance) getPrivKeyFile() string {
-	privKeyFile := os.Getenv("HOME") + "/.ssh/id_rsa"
 	if instance.options.PrivateKeyFile != "" {
-		privKeyFile = instance.options.PrivateKeyFile
+		return instance.options.PrivateKeyFile
 	}
 
-	return privKeyFile
+	return os.Getenv("HOME") + "/.ssh/id_rsa"
 }
 
 func (instance *Instance) populateSshKeyEncrypted(privKeyBytes *pem.Block) error {
