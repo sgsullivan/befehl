@@ -126,15 +126,15 @@ func (instance *Instance) buildHostLists(hostsFilePath string) ([]string, error)
 	}
 	defer hostsFile.Close()
 
-	victims := []string{}
+	hostsList := []string{}
 
 	scanner := bufio.NewScanner(hostsFile)
 	for scanner.Scan() {
 		host := scanner.Text()
-		victims = append(victims, host)
+		hostsList = append(hostsList, host)
 	}
 
-	return victims, scanner.Err()
+	return hostsList, scanner.Err()
 }
 
 func (instance *Instance) getSshClientConfig() *ssh.ClientConfig {
