@@ -97,7 +97,7 @@ func (instance *Instance) runPayload(wg *sync.WaitGroup, host string, port int, 
 	if err != nil {
 		uhoh := fmt.Sprintf("ssh.NewSession() to %s failed: %s\n", host, err)
 		color.Red(uhoh)
-		if err := instance.logPayloadRun(host, uhoh); err != nil {
+		if err := instance.logPayloadRun(hostPort, uhoh); err != nil {
 			panic(err)
 		}
 		return
@@ -119,7 +119,7 @@ func (instance *Instance) runPayload(wg *sync.WaitGroup, host string, port int, 
 	if err := session.RequestPty("xterm", 24, 80, modes); err != nil {
 		uhoh := fmt.Sprintf("session.RequestPty() to %s failed: %s\n", host, err)
 		color.Red(uhoh)
-		if err := instance.logPayloadRun(host, uhoh); err != nil {
+		if err := instance.logPayloadRun(hostPort, uhoh); err != nil {
 			panic(err)
 		}
 		return
@@ -133,7 +133,7 @@ func (instance *Instance) runPayload(wg *sync.WaitGroup, host string, port int, 
 	}
 
 	cmdOutput := stdout.String() + stderr.String() + "\n" + sessionRunAttempt
-	if err := instance.logPayloadRun(host, cmdOutput); err != nil {
+	if err := instance.logPayloadRun(hostPort, cmdOutput); err != nil {
 		panic(err)
 	}
 }
