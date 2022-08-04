@@ -168,7 +168,7 @@ func (instance *Instance) executePayloadOnHosts(payload []byte, hostsFilePath st
 		go func() {
 			instance.runPayload(&wg, host, payload, sshConfig)
 			<-hostsChan
-			remaining := queue.decrementCounter(hostCnt)
+			remaining := queue.decrementCounter()
 			color.Magenta(fmt.Sprintf("Remaining: %d / %d\n", remaining, hostCnt))
 		}()
 	}

@@ -14,6 +14,6 @@ func (q *queue) New(hostCnt int64) *queue {
 	}
 }
 
-func (q *queue) decrementCounter(total int) int64 {
+func (q *queue) decrementCounter() int64 {
 	return atomic.AddInt64(&q.count, -1)
 }
