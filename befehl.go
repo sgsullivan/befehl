@@ -24,7 +24,7 @@ func New(options *Options) *Instance {
 
 func (instance *Instance) Execute(hostsFile, payload string, routines int) error {
 	if bytePayload, readFileErr := filesystem.ReadFile(payload); readFileErr == nil {
-		if instance.sshKey != nil {
+		if instance.sshKey == nil {
 			if err := instance.populateSshKey(); err != nil {
 				return err
 			}
@@ -78,12 +78,14 @@ func (instance *Instance) runPayload(wg *sync.WaitGroup, host string, port int, 
 	defer wg.Done()
 	log.Printf("running payload on %s:%d ..\n", host, port)
 
+	hostPort := fmt.Sprintf("%s:%d", host, port)
+
 	// establish the connection
-	conn, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", host, port), sshConfig)
+	conn, err := ssh.Dial("tcp", hostPort, sshConfig)
 	if err != nil {
 		uhoh := fmt.Sprintf("ssh.Dial() to %s failed: %s\n", host, err)
 		color.Red(uhoh)
-		if err := instance.logPayloadRun(host, uhoh); err != nil {
+		if err := instance.logPayloadRun(hostPort, uhoh); err != nil {
 			panic(err)
 		}
 		return
