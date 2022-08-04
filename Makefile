@@ -6,7 +6,9 @@ format:
 clean:
 	rm -rf _exe/
 
-build:  format test
+build:  format test build-only
+
+build-only:
 	go build -x -o _exe/befehl cmd/main/main.go
 
 test:
