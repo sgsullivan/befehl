@@ -14,6 +14,7 @@ import (
 
 	"github.com/sgsullivan/befehl/helpers/filesystem"
 	"github.com/sgsullivan/befehl/helpers/waitgroup"
+	"github.com/sgsullivan/befehl/queue"
 )
 
 func New(options *Options) *Instance {
@@ -45,7 +46,7 @@ func (instance *Instance) executePayloadOnHosts(payload []byte, hostsFilePath st
 	hostCnt := len(hostsList)
 	wg.Add(hostCnt)
 	hostsChan := make(chan int, routines)
-	queue := new(queue).New(int64(hostCnt))
+	queueInstance := new(queue.Queue).New(int64(hostCnt))
 
 	sshConfig := instance.getSshClientConfig()
 
@@ -55,7 +56,7 @@ func (instance *Instance) executePayloadOnHosts(payload []byte, hostsFilePath st
 		go func() {
 			instance.runPayload(&wg, host, payload, sshConfig)
 			<-hostsChan
-			remaining := queue.decrementCounter()
+			remaining := queueInstance.DecrementCounter()
 			color.Magenta(fmt.Sprintf("Remaining: %d / %d\n", remaining, hostCnt))
 		}()
 	}
