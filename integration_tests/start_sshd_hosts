@@ -25,7 +25,5 @@ clear_befehl_sshd_containers
 for (( container_num=1; container_num<=$SSH_HOSTS; container_num++ ))
  do 
     echo "STARTING befehl sshd container [$container_num]..."
-    #start_sshd_container $container_num $(($STARTING_SSHD_PORT + $container_num))
-
     start_sshd_container $container_num $([[ $container_num == 1 ]] && echo $STARTING_SSHD_PORT || echo $(($STARTING_SSHD_PORT + $(($container_num - 1)))))
  done
