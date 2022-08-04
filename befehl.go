@@ -49,11 +49,14 @@ func (instance *Instance) executePayloadOnHosts(payload []byte, hostsFilePath st
 
 	sshConfig := instance.getSshClientConfig()
 
-	for _, host := range hostsList {
-		host := host
+	for _, hostEntry := range hostsList {
+		hostname, port, err := instance.transformHostFromHostEntry(hostEntry)
+		if err != nil {
+			return err
+		}
 		hostsChan <- 1
 		go func() {
-			instance.runPayload(&wg, host, payload, sshConfig)
+			instance.runPayload(&wg, hostname, port, payload, sshConfig)
 			<-hostsChan
 			remaining := queueInstance.DecrementCounter()
 			color.Magenta(fmt.Sprintf("Remaining: %d / %d\n", remaining, hostCnt))
@@ -68,12 +71,12 @@ func (instance *Instance) executePayloadOnHosts(payload []byte, hostsFilePath st
 	return nil
 }
 
-func (instance *Instance) runPayload(wg *sync.WaitGroup, host string, payload []byte, sshConfig *ssh.ClientConfig) {
+func (instance *Instance) runPayload(wg *sync.WaitGroup, host string, port int, payload []byte, sshConfig *ssh.ClientConfig) {
 	defer wg.Done()
 	log.Printf("running payload on %s ..\n", host)
 
 	// establish the connection
-	conn, err := ssh.Dial("tcp", fmt.Sprintf("%s:22", host), sshConfig)
+	conn, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", host, port), sshConfig)
 	if err != nil {
 		uhoh := fmt.Sprintf("ssh.Dial() to %s failed: %s\n", host, err)
 		color.Red(uhoh)

@@ -5,8 +5,17 @@
 
 `./befehl execute --hosts targets --payload payload.sh -routines 2000`
 
-Output of each payload run will be in the log directory (by default, its `$HOME/befehl/logs`) in a file named after the machine it ran on.
-The targets file should be a plain text file containing all hosts to run the payload on, separated by a new line.
+Output of each payload run for every node will be in the log directory (by default, its `$HOME/befehl/logs`) in a file named after the machine it ran on.
+
+The targets file should be a plain text file (shown below) containing all hosts to run the payload on, separated by a new line. If the host has an alternate ssh port (aka not port 22) then specify the alternate port like `192.168.0.2:2222`. An example host list is shown below specifying alternate ssh port:
+
+```
+192.168.0.2
+192.168.0.3:1000
+192.168.0.4:22
+```
+
+In this example, the connection attempt to 192.16.0.2 will be attempted on port 22 because the port wasn't specified.
 
 ## Configuration
 
