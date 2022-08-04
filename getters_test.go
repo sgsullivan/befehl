@@ -21,9 +21,16 @@ func getZeroValOpts() *Instance {
 	})
 }
 
-var defaultKnownHosts = os.Getenv("HOME") + "/.ssh/known_hosts"
+var defaultSshPath = os.Getenv("HOME") + "/.ssh"
+var defaultKnownHosts = defaultSshPath + "/known_hosts"
 
 func init() {
+	if !filesystem.PathExists(defaultSshPath) {
+		if err := os.Mkdir(defaultSshPath, os.ModePerm); err != nil {
+			panic(fmt.Sprintf("failed to create %s: %s", defaultSshPath, err))
+		}
+	}
+
 	if !filesystem.FileExists(defaultKnownHosts) {
 		f, err := os.Create(defaultKnownHosts)
 		if err != nil {
