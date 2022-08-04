@@ -6,7 +6,6 @@ source integration_tests/lib/common
 
 SSH_HOSTS=$1
 STARTING_SSHD_PORT=1000
-BEFEHL_DOCKER_CMD=${BEFEHL_DOCKER_CMD:-sudo docker}
 
 function build_sshd_image {
     $BEFEHL_DOCKER_CMD build -t befehl-sshd integration_tests/docker
