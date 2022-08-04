@@ -1,0 +1,9 @@
+#!/bin/bash
+
+set -eux
+
+source integration_tests/lib/common
+
+BEFEHL_DOCKER_CMD=${BEFEHL_DOCKER_CMD:-sudo docker}
+
+clear_befehl_sshd_containers

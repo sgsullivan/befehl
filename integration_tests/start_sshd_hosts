@@ -1,0 +1,32 @@
+#!/bin/bash
+
+set -eux
+
+source integration_tests/lib/common
+
+SSH_HOSTS=$1
+STARTING_SSHD_PORT=1000
+BEFEHL_DOCKER_CMD=${BEFEHL_DOCKER_CMD:-sudo docker}
+
+function build_sshd_image {
+    $BEFEHL_DOCKER_CMD build -t befehl-sshd integration_tests/docker
+}
+
+function start_sshd_container {
+    local num=$1
+    local port=$2
+    $BEFEHL_DOCKER_CMD run --name befehl_sshd_$num -d -p $port:22 befehl-sshd:latest
+    # Will be accessible via:
+    #   ssh -i integration_tests/docker/ssh/id_rsa root@localhost -p1000
+}
+
+build_sshd_image
+clear_befehl_sshd_containers
+
+for (( container_num=1; container_num<=$SSH_HOSTS; container_num++ ))
+ do 
+    echo "STARTING befehl sshd container [$container_num]..."
+    #start_sshd_container $container_num $(($STARTING_SSHD_PORT + $container_num))
+
+    start_sshd_container $container_num $([[ $container_num == 1 ]] && echo $STARTING_SSHD_PORT || echo $(($STARTING_SSHD_PORT + $(($container_num - 1)))))
+ done

@@ -1,0 +1,6 @@
+#!/bin/bash
+
+function clear_befehl_sshd_containers {
+    local ids_to_clear=$($BEFEHL_DOCKER_CMD ps -a |grep befehl_sshd_|awk '{print $1}')
+    [[ -n $ids_to_clear ]] && echo "$ids_to_clear"|xargs $BEFEHL_DOCKER_CMD rm --force || echo "nothing to clear"
+}

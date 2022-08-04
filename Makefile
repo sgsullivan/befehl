@@ -19,3 +19,9 @@ update-deps:
 
 release-build:
 	scripts/build/release-build
+
+integration-nuke-sshd-hosts:
+	integration_tests/nuke_sshd_hosts
+
+integration-start-sshd-hosts:
+	integration_tests/start_sshd_hosts 5
