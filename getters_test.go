@@ -62,7 +62,7 @@ func TestGetPrivKeyFile(t *testing.T) {
 
 func TestGetSshClientConfig(t *testing.T) {
 	got := getNonZeroValOpts().getSshClientConfig()
-	if got.Timeout != time.Duration(10) * time.Second {
+	if got.Timeout != time.Duration(10)*time.Second {
 		t.Fatalf("returned timeout %s is unexpected", got.Timeout)
 	}
 }
