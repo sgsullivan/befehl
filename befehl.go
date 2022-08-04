@@ -47,7 +47,10 @@ func (instance *Instance) executePayloadOnHosts(payload []byte, hostsFilePath st
 	hostsChan := make(chan int, routines)
 	queueInstance := new(queue.Queue).New(int64(hostCnt))
 
-	sshConfig := instance.getSshClientConfig()
+	sshConfig, err := instance.getSshClientConfig()
+	if err != nil {
+		return err
+	}
 
 	for _, hostEntry := range hostsList {
 		hostname, port, err := instance.transformHostFromHostEntry(hostEntry)
@@ -73,7 +76,7 @@ func (instance *Instance) executePayloadOnHosts(payload []byte, hostsFilePath st
 
 func (instance *Instance) runPayload(wg *sync.WaitGroup, host string, port int, payload []byte, sshConfig *ssh.ClientConfig) {
 	defer wg.Done()
-	log.Printf("running payload on %s ..\n", host)
+	log.Printf("running payload on %s:%d ..\n", host, port)
 
 	// establish the connection
 	conn, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", host, port), sshConfig)

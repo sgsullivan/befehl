@@ -46,6 +46,10 @@ sshuser = "eingeben"
 			PrivateKeyFile: Config.GetString("auth.privatekeyfile"),
 			SshUser:        Config.GetString("auth.sshuser"),
 			LogDir:         Config.GetString("general.logdir"),
+			SshHostKeyConfig: befehl.SshHostKeyConfig{
+				Enabled:        Config.GetBool("auth.sshhostkeyverificationenabled"),
+				KnownHostsPath: Config.GetString("auth.sshknownhostspath"),
+			},
 		})
 
 		if err := instance.Execute(hostsFile, payload, routines); err != nil {

@@ -27,9 +27,11 @@ logdir = "/home/ssullivan/log-special"
 [auth]
 privatekeyfile = "/home/ssullivan/alt/.ssh/id_rsa"
 sshuser = "nonrootuser"
+sshhostkeyverificationenabled = true
+sshknownhostspath = "/home/asullivan/alt/.ssh/known_hosts"
 ```
 
-These options should be self explanatory so I wont describe what each does here.
+Unless enabled as shown above, ssh known host verification is disabled.
 
 ## Obtaining prebuilt binaries
 
