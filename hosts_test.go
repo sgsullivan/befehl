@@ -6,7 +6,7 @@ import (
 )
 
 func TestBuildHostList(t *testing.T) {
-	res, err := getNonZeroValOpts().buildHostList("unit_test_resources/legacy_hosts")
+	res, err := getNonZeroValOpts().buildHostList("unit_test_resources/hosts_with_ports")
 	if err != nil {
 		t.Fatalf("error building hostList: %s", err)
 	}
@@ -17,13 +17,13 @@ func TestBuildHostList(t *testing.T) {
 	expected := []string{
 		"192.168.2.2",
 		"192.168.2.3",
-		"192.168.2.4",
+		"192.168.2.4:32",
 		"192.168.2.5",
 		"192.168.2.6",
 		"192.168.2.7",
-		"192.168.2.8",
+		"192.168.2.8:1000",
 		"192.168.2.9",
-		"192.168.2.10",
+		"192.168.2.10:4141",
 	}
 
 	if !reflect.DeepEqual(res, expected) {
