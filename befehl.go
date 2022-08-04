@@ -20,17 +20,6 @@ import (
 	"github.com/sgsullivan/befehl/helpers/waitgroup"
 )
 
-type Options struct {
-	PrivateKeyFile string
-	SshUser        string
-	LogDir         string
-}
-
-type Instance struct {
-	options *Options
-	sshKey  ssh.Signer
-}
-
 func New(options *Options) *Instance {
 	return &Instance{
 		options: options,
@@ -48,14 +37,6 @@ func (instance *Instance) Execute(hostsFile, payload string, routines int) error
 	} else {
 		return readFileErr
 	}
-}
-
-func (instance *Instance) getPrivKeyFile() string {
-	if instance.options.PrivateKeyFile != "" {
-		return instance.options.PrivateKeyFile
-	}
-
-	return os.Getenv("HOME") + "/.ssh/id_rsa"
 }
 
 func (instance *Instance) populateSshKeyEncrypted(privKeyBytes *pem.Block) error {
@@ -112,13 +93,6 @@ func (instance *Instance) populateSshKey() error {
 	}
 }
 
-func (instance *Instance) getSshUser() string {
-	if instance.options.SshUser != "" {
-		return instance.options.SshUser
-	}
-	return "root"
-}
-
 func (instance *Instance) buildHostLists(hostsFilePath string) ([]string, error) {
 	hostsFile, err := os.Open(hostsFilePath)
 	if err != nil {
@@ -135,17 +109,6 @@ func (instance *Instance) buildHostLists(hostsFilePath string) ([]string, error)
 	}
 
 	return hostsList, scanner.Err()
-}
-
-func (instance *Instance) getSshClientConfig() *ssh.ClientConfig {
-	return &ssh.ClientConfig{
-		User: instance.getSshUser(),
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(instance.sshKey),
-		},
-		Timeout:         time.Duration(10) * time.Second,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-	}
 }
 
 func (instance *Instance) executePayloadOnHosts(payload []byte, hostsFilePath string, routines int) error {
@@ -241,17 +204,6 @@ func (instance *Instance) runPayload(wg *sync.WaitGroup, host string, payload []
 	if err := instance.logPayloadRun(host, cmdOutput); err != nil {
 		panic(err)
 	}
-}
-
-func (instance *Instance) getLogDir() string {
-	if instance.options.LogDir != "" {
-		return instance.options.LogDir
-	}
-	return os.Getenv("HOME") + "/befehl/logs"
-}
-
-func (instance *Instance) getLogFilePath(host string) string {
-	return instance.getLogDir() + "/" + host
 }
 
 func (instance *Instance) prepareLogDir() error {
