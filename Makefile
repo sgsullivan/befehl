@@ -3,16 +3,23 @@ all: build
 format:
 	gofmt -s -w .
 
-clean:
+clean: clean-test-cache
 	rm -rf _exe/
+	go clean -x
 
-build:  format test build-only
+clean-test-cache:
+	go clean -x -testcache
+
+build: format test build-only
 
 build-only:
 	go build -x -o _exe/befehl cmd/main/main.go
 
-test:
-	go test -v ./...
+unit-test: clean-test-cache
+	scripts/test/run_unit_tests
+
+integration-test: clean-test-cache
+	scripts/test/run_integration_tests
 
 update-deps:
 	go get -u

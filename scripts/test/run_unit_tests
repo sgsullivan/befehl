@@ -1,0 +1,5 @@
+#!/bin/bash
+
+set -xe
+
+go test -v $(go list ./...|grep -v integration_tests)
