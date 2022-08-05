@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -38,8 +39,12 @@ func initConfig() {
 		configDir = os.Getenv("BEFEHL_CONFIG_DIR")
 	}
 	thisViper.AddConfigPath(configDir)
+	thisViper.SetEnvPrefix("befehl")
+	thisViper.AutomaticEnv()
+	thisViper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	if err := thisViper.ReadInConfig(); err != nil {
 		fmt.Printf("Failed reading config (using defaults) [%s]: [%s]\n", thisViper.ConfigFileUsed(), err)
 	}
+
 	Config = thisViper
 }

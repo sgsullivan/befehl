@@ -18,7 +18,7 @@ func buildApplication(cmdCancel chan bool, workDir string) error {
 	return nil
 }
 
-func runPayload(cmdCancel chan bool, workDir string) error {
+func runPayload(cmdCancel chan bool, workDir string, evars []string) error {
 	if stdout, stderr, err := cmd.RunCmd(
 		"./_exe/befehl",
 		[]string{
@@ -30,7 +30,7 @@ func runPayload(cmdCancel chan bool, workDir string) error {
 		},
 		cmdCancel,
 		workDir,
-		[]string{},
+		evars,
 	); err != nil {
 		return fmt.Errorf("Failed running befehl execute: %s %s %s", stdout.String(), stderr.String(), err)
 	} else {
@@ -66,6 +66,11 @@ func TestIntegration(t *testing.T) {
 	}
 
 	workDir := pwd + "/.."
+	privateKeyPath := workDir + "/integration_tests/docker/ssh/id_rsa"
+	evars := []string{
+		fmt.Sprintf("BEFEHL_SSH_PRIVATEKEYFILE=%s", privateKeyPath),
+	}
+
 	cmdCancel := make(chan bool)
 
 	if err := buildApplication(cmdCancel, workDir); err != nil {
@@ -88,7 +93,7 @@ func TestIntegration(t *testing.T) {
 		}
 	}()
 
-	if err := runPayload(cmdCancel, workDir); err != nil {
+	if err := runPayload(cmdCancel, workDir, evars); err != nil {
 		t.Fatal(err)
 	}
 }

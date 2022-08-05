@@ -10,7 +10,7 @@ clean: clean-test-cache
 clean-test-cache:
 	go clean -x -testcache
 
-build: format test build-only
+build: format unit-test build-only
 
 build-only:
 	go build -x -o _exe/befehl cmd/main/main.go
@@ -20,6 +20,8 @@ unit-test: clean-test-cache
 
 integration-test: clean-test-cache
 	scripts/test/run_integration_tests
+
+test: unit-test integration-test
 
 update-deps:
 	go get -u

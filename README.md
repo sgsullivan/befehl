@@ -24,11 +24,11 @@ You can configure befehl with a config file (~/.befehl.[toml|json|yaml]) any ser
 ```toml
 [general]
 logdir = "/home/ssullivan/log-special"
-[auth]
-privatekeyfile = "/home/ssullivan/alt/.ssh/id_rsa"
-sshuser = "nonrootuser"
-sshhostkeyverificationenabled = true
-sshknownhostspath = "/home/asullivan/alt/.ssh/known_hosts"
+[ssh]
+privatekeyfile = "/home/ssullivan/alt/id_rsa"
+user = "eingeben"
+knownhostspath = "/home/asullivan/alt/.ssh/known_hosts"
+hostkeyverificationenabled = true
 ```
 
 Unless enabled as shown above, ssh known host verification is disabled.

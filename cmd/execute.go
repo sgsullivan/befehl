@@ -27,9 +27,11 @@ Heres an example specifying all of the above mentioned options:
 
 [general]
 logdir = "/home/ssullivan/log-special"
-[auth]
+[ssh]
 privatekeyfile = "/home/ssullivan/alt/id_rsa"
-sshuser = "eingeben"
+user = "eingeben"
+knownhostspath = "/home/asullivan/alt/.ssh/known_hosts"
+hostkeyverificationenabled = true
 
 `,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -43,12 +45,12 @@ sshuser = "eingeben"
 		}
 
 		instance := befehl.New(&befehl.Options{
-			PrivateKeyFile: Config.GetString("auth.privatekeyfile"),
-			SshUser:        Config.GetString("auth.sshuser"),
+			PrivateKeyFile: Config.GetString("ssh.privatekeyfile"),
+			SshUser:        Config.GetString("ssh.sshuser"),
 			LogDir:         Config.GetString("general.logdir"),
 			SshHostKeyConfig: befehl.SshHostKeyConfig{
-				Enabled:        Config.GetBool("auth.sshhostkeyverificationenabled"),
-				KnownHostsPath: Config.GetString("auth.sshknownhostspath"),
+				Enabled:        Config.GetBool("ssh.hostkeyverificationenabled"),
+				KnownHostsPath: Config.GetString("ssh.knownhostspath"),
 			},
 		})
 
