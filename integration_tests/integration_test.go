@@ -1,12 +1,14 @@
 package integration
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/sgsullivan/befehl/helpers/filesystem"
 	"github.com/sgsullivan/befehl/integration_tests/util/cmd"
 )
 
@@ -59,6 +61,33 @@ func startSshdHosts(cmdCancel chan bool, workDir string) error {
 	return nil
 }
 
+func verifyPayloadLogsPresent(workDir string) error {
+	logDir := os.Getenv("HOME") + "/befehl/logs"
+
+	hostsFilePath := workDir + "/integration_tests/examples/hosts"
+	hostsFile, err := os.Open(hostsFilePath)
+	if err != nil {
+		return err
+	}
+
+	scanner := bufio.NewScanner(hostsFile)
+	defer func() {
+		if err := os.RemoveAll(logDir); err != nil {
+			panic(fmt.Sprintf("error deleting %s: %s", logDir, err))
+		}
+		hostsFile.Close()
+	}()
+	for scanner.Scan() {
+		hostEntry := scanner.Text()
+		expectedLogPath := logDir + "/" + hostEntry
+		if !filesystem.PathExists(expectedLogPath) {
+			return fmt.Errorf("for host %s expected path %s to exist", hostEntry, expectedLogPath)
+		}
+	}
+
+	return nil
+}
+
 func TestIntegration(t *testing.T) {
 	pwd, err := os.Getwd()
 	if err != nil {
@@ -94,6 +123,10 @@ func TestIntegration(t *testing.T) {
 	}()
 
 	if err := runPayload(cmdCancel, workDir, evars); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := verifyPayloadLogsPresent(workDir); err != nil {
 		t.Fatal(err)
 	}
 }
