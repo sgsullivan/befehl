@@ -9,10 +9,27 @@ import (
 
 var executeCmd = &cobra.Command{
 	Use:   "execute",
-	Short: "Execute the given payload against the given hosts list",
-	Long: `Executes the given payload on each host in the hosts list. Hosts in the hosts
-list should be separated by a new line. You can control how many payloads run concurrently by
-passing the routines flag. 
+	Short: "Execute the given payload(s) against the given host(s) from configuration",
+	Long: `Execute the given payload(s) against the given host(s) from configuration specified
+by the runconfig flag. Below is an example runconfig:
+
+{
+	"payload": "integration_tests/examples/payload",
+	"hosts": [{
+		"host": "127.0.0.1",
+		"port": 1000,
+		"user": "root"
+	  },
+	  {
+		"host": "127.0.0.1",
+		"port": 1001,
+		"user": "root",
+		"payload": "integration_tests/examples/payload-override"
+	  }
+	]
+  }
+
+You can control how many payloads are executed concurrently by passing the routines flag.
 
 By default befehl will use the private key in $HOME/.ssh/id_rsa. This can be overrode by
 specifying auth.privatekeyfile in ~/.befehl.[toml|json|yaml].
@@ -20,23 +37,18 @@ specifying auth.privatekeyfile in ~/.befehl.[toml|json|yaml].
 By default befehl will write the output of each payload for each host in $HOME/befehl/logs. This
 can be overrode by specifying general.logdir in ~/.befehl.[toml|json|yaml].
 
-By default befehl will attempt to ssh as root. This can be overrode by specifying auth.sshuser
-in ~/.befehl.[toml|json|yaml].
-
-Heres an example specifying all of the above mentioned options:
+Heres an example specifying all supported options:
 
 [general]
 logdir = "/home/ssullivan/log-special"
 [ssh]
 privatekeyfile = "/home/ssullivan/alt/id_rsa"
-user = "eingeben"
 knownhostspath = "/home/asullivan/alt/.ssh/known_hosts"
 hostkeyverificationenabled = true
 
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		hostsFile, _ := cmd.Flags().GetString("hosts")
-		payload, _ := cmd.Flags().GetString("payload")
+		runConfig, _ := cmd.Flags().GetString("runconfig")
 		routines, _ := cmd.Flags().GetInt("routines")
 
 		if routines == 0 {
@@ -54,7 +66,7 @@ hostkeyverificationenabled = true
 			},
 		})
 
-		if err := instance.Execute(hostsFile, payload, routines); err != nil {
+		if err := instance.Execute(runConfig, routines); err != nil {
 			panic(err)
 		}
 	},
@@ -63,10 +75,8 @@ hostkeyverificationenabled = true
 func init() {
 	RootCmd.AddCommand(executeCmd)
 
-	executeCmd.Flags().String("payload", "", "file location to the payload, which contains the commands to execute on the remote hosts")
-	executeCmd.Flags().String("hosts", "", "file location to hosts list, which contains all hosts (separated by newline) to run the payload on")
+	executeCmd.Flags().String("runconfig", "", "file location to the runtime configuration")
 	executeCmd.Flags().Int("routines", 0, "maximum number of payloads that will run at once (defaults to 30)")
 
-	executeCmd.MarkFlagRequired("payload")
-	executeCmd.MarkFlagRequired("hosts")
+	executeCmd.MarkFlagRequired("runconfig")
 }

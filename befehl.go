@@ -22,27 +22,24 @@ func New(options *Options) *Instance {
 	}
 }
 
-func (instance *Instance) Execute(hostsFile, payload string, routines int) error {
-	if bytePayload, readFileErr := filesystem.ReadFile(payload); readFileErr == nil {
-		if instance.sshKey == nil {
-			if err := instance.populateSshKey(); err != nil {
-				return err
-			}
-		}
-		return instance.executePayloadOnHosts(bytePayload, hostsFile, routines)
-	} else {
-		return readFileErr
-	}
-}
-
-func (instance *Instance) executePayloadOnHosts(payload []byte, hostsFilePath string, routines int) error {
-	hostsList, err := instance.buildHostList(hostsFilePath)
+func (instance *Instance) Execute(runConfig string, routines int) error {
+	runtimeConfig, err := GetRuntimeConfig(runConfig)
 	if err != nil {
 		return err
 	}
 
+	if instance.sshKey == nil {
+		if err := instance.populateSshKey(); err != nil {
+			return err
+		}
+	}
+
+	return instance.executePayloadOnHosts(runtimeConfig, routines)
+}
+
+func (instance *Instance) executePayloadOnHosts(runtimeConfig RuntimeConfig, routines int) error {
 	var wg sync.WaitGroup
-	hostCnt := len(hostsList)
+	hostCnt := len(runtimeConfig.Hosts)
 	wg.Add(hostCnt)
 	hostsChan := make(chan int, routines)
 	queueInstance := new(queue.Queue).New(int64(hostCnt))
@@ -52,18 +49,26 @@ func (instance *Instance) executePayloadOnHosts(payload []byte, hostsFilePath st
 		return err
 	}
 
-	for _, hostEntry := range hostsList {
-		hostname, port, err := instance.transformHostFromHostEntry(hostEntry)
+	for _, hostEntry := range runtimeConfig.Hosts {
+		hostsChan <- 1
+
+		hostEntry := hostEntry
+
+		chosenPayloadPath := runtimeConfig.Payload
+		if hostEntry.Payload != "" {
+			chosenPayloadPath = hostEntry.Payload
+		}
+		chosenPayload, err := filesystem.ReadFile(chosenPayloadPath)
 		if err != nil {
 			return err
 		}
-		hostsChan <- 1
-		go func() {
-			instance.runPayload(&wg, hostname, port, payload, sshConfig)
+
+		go func(hostEntry *RuntimeConfigHost) {
+			instance.runPayload(&wg, hostEntry.Host, hostEntry.Port, chosenPayload, sshConfig)
 			<-hostsChan
 			remaining := queueInstance.DecrementCounter()
 			color.Magenta(fmt.Sprintf("Remaining: %d / %d\n", remaining, hostCnt))
-		}()
+		}(&hostEntry)
 	}
 
 	if waitgroup.WgTimeout(&wg, time.Duration(1800)*time.Second) {

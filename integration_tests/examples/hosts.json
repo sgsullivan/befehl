@@ -1,0 +1,30 @@
+{
+	"payload": "integration_tests/examples/payload",
+	"hosts": [{
+			"host": "127.0.0.1",
+			"port": 1000,
+			"user": "root"
+		},
+		{
+			"host": "127.0.0.1",
+			"port": 1001,
+			"user": "root",
+			"payload": "integration_tests/examples/payload-override"
+		},
+		{
+			"host": "127.0.0.1",
+			"port": 1002,
+			"user": "root"
+		},
+		{
+			"host": "127.0.0.1",
+			"port": 1003,
+			"user": "root"
+		},
+		{
+			"host": "127.0.0.1",
+			"port": 1004,
+			"user": "root"
+		}
+	]
+}

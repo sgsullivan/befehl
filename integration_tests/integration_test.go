@@ -1,13 +1,13 @@
 package integration
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/sgsullivan/befehl"
 	"github.com/sgsullivan/befehl/helpers/filesystem"
 	"github.com/sgsullivan/befehl/integration_tests/util/cmd"
 )
@@ -25,10 +25,10 @@ func runPayload(cmdCancel chan bool, workDir string, evars []string) error {
 		"./_exe/befehl",
 		[]string{
 			"execute",
-			"--hosts",
-			"integration_tests/examples/hosts",
-			"--payload",
-			"integration_tests/examples/payload",
+			"--runconfig",
+			"integration_tests/examples/hosts.json",
+			"--routines",
+			"10",
 		},
 		cmdCancel,
 		workDir,
@@ -64,24 +64,22 @@ func startSshdHosts(cmdCancel chan bool, workDir string) error {
 func verifyPayloadLogsPresent(workDir string) error {
 	logDir := os.Getenv("HOME") + "/befehl/logs"
 
-	hostsFilePath := workDir + "/integration_tests/examples/hosts"
-	hostsFile, err := os.Open(hostsFilePath)
+	hostsFilePath := workDir + "/integration_tests/examples/hosts.json"
+	runtimeConfig, err := befehl.GetRuntimeConfig(hostsFilePath)
 	if err != nil {
 		return err
 	}
 
-	scanner := bufio.NewScanner(hostsFile)
 	defer func() {
 		if err := os.RemoveAll(logDir); err != nil {
 			panic(fmt.Sprintf("error deleting %s: %s", logDir, err))
 		}
-		hostsFile.Close()
 	}()
-	for scanner.Scan() {
-		hostEntry := scanner.Text()
-		expectedLogPath := logDir + "/" + hostEntry
+
+	for _, hostEntry := range runtimeConfig.Hosts {
+		expectedLogPath := fmt.Sprintf("%s/%s:%d", logDir, hostEntry.Host, hostEntry.Port)
 		if !filesystem.PathExists(expectedLogPath) {
-			return fmt.Errorf("for host %s expected path %s to exist", hostEntry, expectedLogPath)
+			return fmt.Errorf("for host %+v expected path %s to exist", hostEntry, expectedLogPath)
 		}
 	}
 

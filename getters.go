@@ -1,6 +1,8 @@
 package befehl
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"os"
 	"time"
 
@@ -67,4 +69,15 @@ func (instance *Instance) getPrivKeyFile() string {
 	}
 
 	return os.Getenv("HOME") + "/.ssh/id_rsa"
+}
+
+func GetRuntimeConfig(pathToRuntimeConfig string) (config RuntimeConfig, err error) {
+	configBytes, err := ioutil.ReadFile(pathToRuntimeConfig)
+	if err != nil {
+		return
+	}
+
+	err = json.Unmarshal(configBytes, &config)
+
+	return
 }
