@@ -44,7 +44,7 @@ func (instance *Instance) executePayloadOnHosts(runtimeConfig RuntimeConfig, rou
 	hostsChan := make(chan int, routines)
 	queueInstance := new(queue.Queue).New(int64(hostCnt))
 
-	sshConfig, err := instance.getSshClientConfig()
+	defaultSshConfig, err := instance.getDefaultSshClientConfig()
 	if err != nil {
 		return err
 	}
@@ -61,6 +61,14 @@ func (instance *Instance) executePayloadOnHosts(runtimeConfig RuntimeConfig, rou
 		chosenPayload, err := filesystem.ReadFile(chosenPayloadPath)
 		if err != nil {
 			return err
+		}
+
+		sshConfig := defaultSshConfig
+		if hostEntry.User != "" {
+			sshConfig, err = instance.getSshUserClientConfig(hostEntry.User)
+			if err != nil {
+				return err
+			}
 		}
 
 		go func(hostEntry *RuntimeConfigHost) {

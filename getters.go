@@ -37,10 +37,10 @@ func (instance *Instance) getSshHostKeyCallback() (hostKeyCallback ssh.HostKeyCa
 	return
 }
 
-func (instance *Instance) getSshClientConfig() (*ssh.ClientConfig, error) {
+func (instance *Instance) getSshClientConfig(getSshUser func() string) (*ssh.ClientConfig, error) {
 	if hostKeyCallback, err := instance.getSshHostKeyCallback(); err == nil {
 		return &ssh.ClientConfig{
-			User: instance.getSshUser(),
+			User: getSshUser(),
 			Auth: []ssh.AuthMethod{
 				ssh.PublicKeys(instance.sshKey),
 			},
@@ -50,6 +50,14 @@ func (instance *Instance) getSshClientConfig() (*ssh.ClientConfig, error) {
 	} else {
 		return nil, err
 	}
+}
+
+func (instance *Instance) getDefaultSshClientConfig() (*ssh.ClientConfig, error) {
+	return instance.getSshClientConfig(func() string { return instance.getSshUser() })
+}
+
+func (instance *Instance) getSshUserClientConfig(sshUser string) (*ssh.ClientConfig, error) {
+	return instance.getSshClientConfig(func() string { return sshUser })
 }
 
 func (instance *Instance) getLogDir() string {

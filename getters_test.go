@@ -90,7 +90,7 @@ func TestGetPrivKeyFile(t *testing.T) {
 }
 
 func TestGetSshClientConfig(t *testing.T) {
-	got, err := getNonZeroValOpts().getSshClientConfig()
+	got, err := getNonZeroValOpts().getSshClientConfig(func() string { return getNonZeroValOpts().getSshUser() })
 	if err != nil {
 		t.Fatal(err)
 	}
