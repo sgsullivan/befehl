@@ -10,15 +10,35 @@ import (
 )
 
 func getZeroValOpts() *Instance {
-	return New(&Options{
+	if i, e := New(&Options{
 		PrivateKeyFile: "",
-		SshUser:        "",
 		LogDir:         "",
 		SshHostKeyConfig: SshHostKeyConfig{
 			Enabled:        false,
 			KnownHostsPath: "",
 		},
+		RunConfigPath: "unit-test-resources/zero-hosts.json",
+	}); e != nil {
+		panic(e)
+	} else {
+		return i
+	}
+}
+
+func getNonZeroValOpts() *Instance {
+	i, err := New(&Options{
+		PrivateKeyFile: "foo",
+		LogDir:         "baz",
+		SshHostKeyConfig: SshHostKeyConfig{
+			Enabled:        true,
+			KnownHostsPath: defaultKnownHosts,
+		},
+		RunConfigPath: "unit-test-resources/hosts.json",
 	})
+	if err != nil {
+		panic(err)
+	}
+	return i
 }
 
 var defaultSshPath = os.Getenv("HOME") + "/.ssh"
@@ -40,24 +60,14 @@ func init() {
 	}
 }
 
-func getNonZeroValOpts() *Instance {
-	return New(&Options{
-		PrivateKeyFile: "foo",
-		SshUser:        "bar",
-		LogDir:         "baz",
-		SshHostKeyConfig: SshHostKeyConfig{
-			Enabled:        true,
-			KnownHostsPath: defaultKnownHosts,
-		},
-	})
-}
-
 func TestGetSshUser(t *testing.T) {
-	if getZeroValOpts().getSshUser() != "root" {
-		t.Fatal("SshUser for zeroval is unexpected")
+	zuser := getZeroValOpts().getDefaultSshUser()
+	if zuser != "root" {
+		t.Fatalf("User [%s] for zeroval is unexpected", zuser)
 	}
-	if getNonZeroValOpts().getSshUser() != "bar" {
-		t.Fatal("SshUser for nonzeroval is unexpected")
+	nuser := getNonZeroValOpts().getDefaultSshUser()
+	if nuser != "r00t" {
+		t.Fatalf("User [%s] for nonzeroval is unexpected", nuser)
 	}
 }
 
@@ -90,7 +100,7 @@ func TestGetPrivKeyFile(t *testing.T) {
 }
 
 func TestGetSshClientConfig(t *testing.T) {
-	got, err := getNonZeroValOpts().getSshClientConfig(func() string { return getNonZeroValOpts().getSshUser() })
+	got, err := getNonZeroValOpts().getSshClientConfig(func() string { return getNonZeroValOpts().getDefaultSshUser() })
 	if err != nil {
 		t.Fatal(err)
 	}

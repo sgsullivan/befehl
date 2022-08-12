@@ -1,5 +1,5 @@
 {
-	"user": "root",
+	"user": "r00t",
 	"payload": "integration_tests/examples/payload",
 	"hosts": [{
 			"host": "127.0.0.1",

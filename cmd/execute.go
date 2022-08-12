@@ -56,17 +56,20 @@ hostkeyverificationenabled = true
 			routines = 30
 		}
 
-		instance := befehl.New(&befehl.Options{
+		instance, err := befehl.New(&befehl.Options{
 			PrivateKeyFile: Config.GetString("ssh.privatekeyfile"),
-			SshUser:        Config.GetString("ssh.sshuser"),
 			LogDir:         Config.GetString("general.logdir"),
 			SshHostKeyConfig: befehl.SshHostKeyConfig{
 				Enabled:        Config.GetBool("ssh.hostkeyverificationenabled"),
 				KnownHostsPath: Config.GetString("ssh.knownhostspath"),
 			},
+			RunConfigPath: runConfig,
 		})
+		if err != nil {
+			panic(err)
+		}
 
-		if err := instance.Execute(runConfig, routines); err != nil {
+		if err := instance.Execute(routines); err != nil {
 			panic(err)
 		}
 	},

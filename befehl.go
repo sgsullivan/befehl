@@ -16,30 +16,31 @@ import (
 	"github.com/sgsullivan/befehl/queue"
 )
 
-func New(options *Options) *Instance {
-	return &Instance{
-		options: options,
+func New(options *Options) (*Instance, error) {
+	runtimeConfig, err := GetRuntimeConfig(options.RunConfigPath)
+	if err != nil {
+		return nil, err
 	}
+
+	return &Instance{
+		options:       options,
+		runtimeConfig: &runtimeConfig,
+	}, nil
 }
 
-func (instance *Instance) Execute(runConfig string, routines int) error {
-	runtimeConfig, err := GetRuntimeConfig(runConfig)
-	if err != nil {
-		return err
-	}
-
+func (instance *Instance) Execute(routines int) error {
 	if instance.sshKey == nil {
 		if err := instance.populateSshKey(); err != nil {
 			return err
 		}
 	}
 
-	return instance.executePayloadOnHosts(runtimeConfig, routines)
+	return instance.executePayloadOnHosts(routines)
 }
 
-func (instance *Instance) executePayloadOnHosts(runtimeConfig RuntimeConfig, routines int) error {
+func (instance *Instance) executePayloadOnHosts(routines int) error {
 	var wg sync.WaitGroup
-	hostCnt := len(runtimeConfig.Hosts)
+	hostCnt := len(instance.runtimeConfig.Hosts)
 	wg.Add(hostCnt)
 	hostsChan := make(chan int, routines)
 	queueInstance := new(queue.Queue).New(int64(hostCnt))
@@ -49,12 +50,12 @@ func (instance *Instance) executePayloadOnHosts(runtimeConfig RuntimeConfig, rou
 		return err
 	}
 
-	for _, hostEntry := range runtimeConfig.Hosts {
+	for _, hostEntry := range instance.runtimeConfig.Hosts {
 		hostsChan <- 1
 
 		hostEntry := hostEntry
 
-		chosenPayloadPath := runtimeConfig.Payload
+		chosenPayloadPath := instance.runtimeConfig.Payload
 		if hostEntry.Payload != "" {
 			chosenPayloadPath = hostEntry.Payload
 		}

@@ -10,9 +10,9 @@ import (
 	"golang.org/x/crypto/ssh/knownhosts"
 )
 
-func (instance *Instance) getSshUser() string {
-	if instance.options.SshUser != "" {
-		return instance.options.SshUser
+func (instance *Instance) getDefaultSshUser() string {
+	if instance.runtimeConfig.User != "" {
+		return instance.runtimeConfig.User
 	}
 	return "root"
 }
@@ -53,7 +53,7 @@ func (instance *Instance) getSshClientConfig(getSshUser func() string) (*ssh.Cli
 }
 
 func (instance *Instance) getDefaultSshClientConfig() (*ssh.ClientConfig, error) {
-	return instance.getSshClientConfig(func() string { return instance.getSshUser() })
+	return instance.getSshClientConfig(func() string { return instance.getDefaultSshUser() })
 }
 
 func (instance *Instance) getSshUserClientConfig(sshUser string) (*ssh.ClientConfig, error) {
