@@ -16,54 +16,68 @@ import (
 	"github.com/sgsullivan/befehl/queue"
 )
 
-func New(options *Options) *Instance {
-	return &Instance{
-		options: options,
-	}
-}
-
-func (instance *Instance) Execute(hostsFile, payload string, routines int) error {
-	if bytePayload, readFileErr := filesystem.ReadFile(payload); readFileErr == nil {
-		if instance.sshKey == nil {
-			if err := instance.populateSshKey(); err != nil {
-				return err
-			}
-		}
-		return instance.executePayloadOnHosts(bytePayload, hostsFile, routines)
-	} else {
-		return readFileErr
-	}
-}
-
-func (instance *Instance) executePayloadOnHosts(payload []byte, hostsFilePath string, routines int) error {
-	hostsList, err := instance.buildHostList(hostsFilePath)
+func New(options *Options) (*Instance, error) {
+	runtimeConfig, err := GetRuntimeConfig(options.RunConfigPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	return &Instance{
+		options:       options,
+		runtimeConfig: &runtimeConfig,
+	}, nil
+}
+
+func (instance *Instance) Execute(routines int) error {
+	if instance.sshKey == nil {
+		if err := instance.populateSshKey(); err != nil {
+			return err
+		}
+	}
+
+	return instance.executePayloadOnHosts(routines)
+}
+
+func (instance *Instance) executePayloadOnHosts(routines int) error {
 	var wg sync.WaitGroup
-	hostCnt := len(hostsList)
+	hostCnt := len(instance.runtimeConfig.Hosts)
 	wg.Add(hostCnt)
 	hostsChan := make(chan int, routines)
 	queueInstance := new(queue.Queue).New(int64(hostCnt))
 
-	sshConfig, err := instance.getSshClientConfig()
+	defaultSshConfig, err := instance.getDefaultSshClientConfig()
 	if err != nil {
 		return err
 	}
 
-	for _, hostEntry := range hostsList {
-		hostname, port, err := instance.transformHostFromHostEntry(hostEntry)
+	for _, hostEntry := range instance.runtimeConfig.Hosts {
+		hostsChan <- 1
+
+		hostEntry := hostEntry
+
+		chosenPayloadPath := instance.runtimeConfig.Payload
+		if hostEntry.Payload != "" {
+			chosenPayloadPath = hostEntry.Payload
+		}
+		chosenPayload, err := filesystem.ReadFile(chosenPayloadPath)
 		if err != nil {
 			return err
 		}
-		hostsChan <- 1
-		go func() {
-			instance.runPayload(&wg, hostname, port, payload, sshConfig)
+
+		sshConfig := defaultSshConfig
+		if hostEntry.User != "" {
+			sshConfig, err = instance.getSshUserClientConfig(hostEntry.User)
+			if err != nil {
+				return err
+			}
+		}
+
+		go func(hostEntry *RuntimeConfigHost) {
+			instance.runPayload(&wg, hostEntry.Host, hostEntry.Port, chosenPayload, sshConfig)
 			<-hostsChan
 			remaining := queueInstance.DecrementCounter()
 			color.Magenta(fmt.Sprintf("Remaining: %d / %d\n", remaining, hostCnt))
-		}()
+		}(&hostEntry)
 	}
 
 	if waitgroup.WgTimeout(&wg, time.Duration(1800)*time.Second) {
