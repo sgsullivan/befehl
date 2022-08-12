@@ -2,10 +2,13 @@ package integration
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/spf13/cast"
 
 	"github.com/sgsullivan/befehl"
 	"github.com/sgsullivan/befehl/helpers/filesystem"
@@ -61,29 +64,64 @@ func startSshdHosts(cmdCancel chan bool, workDir string) error {
 	return nil
 }
 
-func verifyPayloadLogsPresent(workDir string) error {
-	logDir := os.Getenv("HOME") + "/befehl/logs"
+func getLogDir() string {
+	return os.Getenv("HOME") + "/befehl/logs"
+}
 
-	hostsFilePath := workDir + "/integration_tests/examples/hosts.json"
-	runtimeConfig, err := befehl.GetRuntimeConfig(hostsFilePath)
+func getHostsFilePath(workDir string) string {
+	return workDir + "/integration_tests/examples/hosts.json"
+}
+
+func verifyWrittenPayloadLogs(workDir string, f func(c befehl.RuntimeConfig) error) error {
+	runtimeConfig, err := befehl.GetRuntimeConfig(getHostsFilePath(workDir))
 	if err != nil {
 		return err
 	}
 
-	defer func() {
-		if err := os.RemoveAll(logDir); err != nil {
-			panic(fmt.Sprintf("error deleting %s: %s", logDir, err))
-		}
-	}()
+	return f(runtimeConfig)
+}
 
-	for _, hostEntry := range runtimeConfig.Hosts {
-		expectedLogPath := fmt.Sprintf("%s/%s:%d", logDir, hostEntry.Host, hostEntry.Port)
-		if !filesystem.PathExists(expectedLogPath) {
-			return fmt.Errorf("for host %+v expected path %s to exist", hostEntry, expectedLogPath)
-		}
-	}
+func verifyPayloadLogsPresent(workDir string) error {
+	return verifyWrittenPayloadLogs(
+		workDir,
+		func(runtimeConfig befehl.RuntimeConfig) error {
+			logDir := getLogDir()
+			for _, hostEntry := range runtimeConfig.Hosts {
+				expectedLogPath := fmt.Sprintf("%s/%s:%d", logDir, hostEntry.Host, hostEntry.Port)
+				if !filesystem.PathExists(expectedLogPath) {
+					return fmt.Errorf("for host %+v expected path %s to exist", hostEntry, expectedLogPath)
+				}
+			}
+			return nil
+		},
+	)
+}
 
-	return nil
+func verifyExpectedPayloadsRan(workDir string) error {
+	return verifyWrittenPayloadLogs(
+		workDir,
+		func(runtimeConfig befehl.RuntimeConfig) error {
+			logDir := getLogDir()
+			for _, hostEntry := range runtimeConfig.Hosts {
+				expectedLogPath := fmt.Sprintf("%s/%s:%d", logDir, hostEntry.Host, hostEntry.Port)
+				fileContents, err := ioutil.ReadFile(expectedLogPath)
+				if err != nil {
+					return fmt.Errorf("failed to open %s: %s", expectedLogPath, err)
+				}
+				strFileContents := cast.ToString(fileContents)
+				if hostEntry.Payload != "" {
+					if !strings.Contains(strFileContents, "overrode payload") {
+						return fmt.Errorf("payload log at %s doesn't contain overrode payload output", expectedLogPath)
+					}
+				} else {
+					if !strings.Contains(strFileContents, "Hello, world") {
+						return fmt.Errorf("payload log at %s doesn't contain non overrode payload output", expectedLogPath)
+					}
+				}
+			}
+			return nil
+		},
+	)
 }
 
 func TestIntegration(t *testing.T) {
@@ -124,7 +162,18 @@ func TestIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	defer func() {
+		logDir := getLogDir()
+		if err := os.RemoveAll(logDir); err != nil {
+			panic(fmt.Sprintf("error deleting %s: %s", logDir, err))
+		}
+	}()
+
 	if err := verifyPayloadLogsPresent(workDir); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := verifyExpectedPayloadsRan(workDir); err != nil {
 		t.Fatal(err)
 	}
 }
