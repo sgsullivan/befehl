@@ -15,15 +15,15 @@ by the runconfig flag. Below is an example runconfig:
 
 {
 	"payload": "integration_tests/examples/payload",
+	"user": "root",
 	"hosts": [{
 		"host": "127.0.0.1",
-		"port": 1000,
-		"user": "root"
+		"port": 1000
 	  },
 	  {
 		"host": "127.0.0.1",
 		"port": 1001,
-		"user": "root",
+		"user": "snowflake",
 		"payload": "integration_tests/examples/payload-override"
 	  }
 	]
