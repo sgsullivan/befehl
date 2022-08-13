@@ -10,8 +10,10 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"github.com/fatih/color"
+	"github.com/thoas/go-funk"
 
 	"github.com/sgsullivan/befehl/helpers/filesystem"
+	"github.com/sgsullivan/befehl/helpers/slice"
 	"github.com/sgsullivan/befehl/helpers/waitgroup"
 	"github.com/sgsullivan/befehl/queue"
 )
@@ -22,10 +24,16 @@ func New(options *Options) (*Instance, error) {
 		return nil, err
 	}
 
-	return &Instance{
+	instance := &Instance{
 		options:       options,
 		runtimeConfig: &runtimeConfig,
-	}, nil
+	}
+
+	if err := instance.ensureUniqueHosts(); err != nil {
+		return nil, err
+	}
+
+	return instance, nil
 }
 
 func (instance *Instance) Execute(routines int) error {
@@ -36,6 +44,23 @@ func (instance *Instance) Execute(routines int) error {
 	}
 
 	return instance.executePayloadOnHosts(routines)
+}
+
+func (instance *Instance) ensureUniqueHosts() error {
+	maybeDupes := funk.Map(
+		instance.runtimeConfig.Hosts,
+		func(c RuntimeConfigHost) string {
+			return fmt.Sprintf("%s:%d", c.Host, c.Port)
+		},
+	).([]string)
+
+	noDupes := slice.Unique(maybeDupes)
+
+	if len(maybeDupes) != len(noDupes) {
+		return fmt.Errorf("duplicate Host:Port entries in provided configuration")
+	}
+
+	return nil
 }
 
 func (instance *Instance) executePayloadOnHosts(routines int) error {

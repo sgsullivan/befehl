@@ -41,6 +41,18 @@ func getNonZeroValOpts() *Instance {
 	return i
 }
 
+func getDuplicateHostsInConfigInstance(configPath string) (*Instance, error) {
+	return New(&Options{
+		PrivateKeyFile: "foo",
+		LogDir:         "baz",
+		SshHostKeyConfig: SshHostKeyConfig{
+			Enabled:        true,
+			KnownHostsPath: defaultKnownHosts,
+		},
+		RunConfigPath: configPath,
+	})
+}
+
 var defaultSshPath = os.Getenv("HOME") + "/.ssh"
 var defaultKnownHosts = defaultSshPath + "/known_hosts"
 
@@ -57,6 +69,12 @@ func init() {
 			panic(fmt.Sprintf("failed to create %s: %s", defaultKnownHosts, err))
 		}
 		f.Close()
+	}
+}
+
+func TestDuplicateHosts(t *testing.T) {
+	if _, e := getDuplicateHostsInConfigInstance("unit-test-resources/hosts-duplicate.json"); e == nil {
+		t.Fatal("didn't return an error for duplicate host entries")
 	}
 }
 
