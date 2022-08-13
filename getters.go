@@ -2,7 +2,6 @@ package befehl
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"time"
 
@@ -80,7 +79,7 @@ func (instance *Instance) getPrivKeyFile() string {
 }
 
 func GetRuntimeConfig(pathToRuntimeConfig string) (config RuntimeConfig, err error) {
-	configBytes, err := ioutil.ReadFile(pathToRuntimeConfig)
+	configBytes, err := os.ReadFile(pathToRuntimeConfig)
 	if err != nil {
 		return
 	}
